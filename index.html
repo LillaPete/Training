@@ -1,0 +1,1218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Track Piece Designer - Efficient</title>
+  <style>
+    :root{
+      --bg:#f5efe5;--panel:#fffaf2;--line:#d4c3a7;--text:#2f241a;--muted:#6f6255;
+      --accent:#a54c00;--danger:#b42318;--piece-fill:#dac09b;--rail:#4b2a17;
+      --edge:#111;--centre:#f4b35e;--shadow:0 10px 24px rgba(46,31,18,.12);
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;height:100%;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--text);background:var(--bg)}
+    .app{display:grid;grid-template-columns:minmax(0,1fr);height:100vh;overflow:hidden}
+    
+    .workspace{position:relative;min-width:0;overflow:hidden;background:linear-gradient(180deg,#f8f3eb 0%,#f2eadf 100%)}
+    .workspace.panning svg{cursor:grabbing}
+    .preset-strip{position:absolute;left:14px;right:14px;top:14px;z-index:20;background:rgba(255,250,242,.94);backdrop-filter:blur(10px);border:1px solid rgba(0,0,0,.08);border-radius:16px;box-shadow:var(--shadow);padding:8px;max-height:208px;overflow-y:auto;overflow-x:hidden;scrollbar-gutter:stable}
+    .preset-strip:focus-within{box-shadow:0 0 0 2px rgba(165,76,0,.12),var(--shadow)}
+    .preset-buttons{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));grid-auto-rows:94px;gap:6px;width:100%;align-content:start;padding-right:4px}
+    .preset-card{width:100%;min-width:0;height:94px;background:#fffaf2;border:1px solid rgba(0,0,0,.09);border-radius:12px;padding:6px 5px;display:grid;grid-template-rows:32px auto 1fr;gap:3px;box-shadow:0 4px 12px rgba(46,31,18,.08);align-content:start;cursor:pointer}
+    .trash-drop{position:absolute;left:14px;bottom:14px;z-index:18;width:94px;height:94px;display:grid;grid-template-rows:44px auto;gap:4px;align-content:start;justify-items:center;padding:8px 6px;background:rgba(255,250,242,.94);backdrop-filter:blur(10px);border:1px solid rgba(0,0,0,.09);border-radius:12px;box-shadow:0 4px 12px rgba(46,31,18,.08);pointer-events:none;transition:transform .12s ease,border-color .12s ease,box-shadow .12s ease,background .12s ease,opacity .12s ease;opacity:.9}
+    .trash-drop svg{width:38px;height:38px;display:block}
+    .trash-drop .trash-meta{font-size:10px;font-weight:700;line-height:1.05;color:var(--muted);text-align:center}
+    .trash-drop.active{background:rgba(180,35,24,.12);border-color:rgba(180,35,24,.45);box-shadow:0 0 0 2px rgba(180,35,24,.14),0 4px 12px rgba(46,31,18,.08);transform:scale(1.03);opacity:1}
+    .preset-card.active{border-color:rgba(165,76,0,.45);box-shadow:0 0 0 2px rgba(165,76,0,.12),0 4px 12px rgba(46,31,18,.08)}
+    .preset-thumb{width:100%;height:30px;display:block;border-radius:10px;background:linear-gradient(180deg,#fbf5eb 0%,#f2e8d7 100%);border:1px solid rgba(0,0,0,.05)}
+    .preset-code{font-size:11px;font-weight:800;line-height:1}
+    .preset-meta{font-size:7px;color:var(--muted);line-height:1.05;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+    .empty{padding:14px;border:1px dashed rgba(0,0,0,.16);border-radius:14px;color:var(--muted);background:rgba(255,255,255,.55);font-size:14px;line-height:1.45}
+    .spec-card{border:1px solid rgba(0,0,0,.09);background:var(--panel);border-radius:16px;box-shadow:0 8px 18px rgba(46,31,18,.08);margin-bottom:12px;overflow:hidden}
+    .spec-header{display:grid;grid-template-columns:1fr auto;gap:10px;padding:12px;align-items:center}
+    .spec-name{font-weight:800;font-size:15px;line-height:1.25}
+    .spec-meta{color:var(--muted);font-size:12px;margin-top:3px}
+    .spec-actions{display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+    .icon-btn,.mini-btn{padding:8px 10px;border:none;border-radius:10px;font-size:13px;font-weight:700;line-height:1;cursor:pointer}
+    .icon-btn{min-width:36px;background:#efe2d2;color:var(--text)}
+    .icon-btn .arrow{display:inline-block;transition:transform .16s ease}
+    .icon-btn.expanded .arrow{transform:rotate(180deg)}
+    .mini-btn{background:#ead4bc;color:var(--text)}
+    .piece-list{border-top:1px solid rgba(0,0,0,.06);padding:10px 12px 12px;display:none}
+    .piece-list.expanded{display:block}
+    .piece-row{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid rgba(0,0,0,.05);border-radius:10px}
+    .piece-row.active{background:rgba(165,76,0,.10)}
+    .piece-row:last-child{border-bottom:none;padding-bottom:2px}
+    .piece-label{min-width:0;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .piece-toggle{width:18px;height:18px;cursor:pointer}
+    .delete-btn{border:none;width:30px;height:30px;border-radius:999px;background:rgba(180,35,24,.1);color:var(--danger);font-size:18px;font-weight:900;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0}
+    .delete-btn:hover{background:rgba(180,35,24,.18)}
+    button{font:inherit}
+    svg{width:100%;height:100%;display:block;touch-action:none;user-select:none;cursor:grab}
+    .piece .hit,.piece-overlay .hit{cursor:grab}
+    .piece.is-active,.piece-overlay.is-active{filter:drop-shadow(0 0 .9px rgba(165,76,0,.9))}
+    .piece.dragging .hit,.piece-overlay.dragging .hit{cursor:grabbing}
+    @media (max-width:980px){
+      .app{grid-template-columns:1fr;height:100vh}
+      
+      .workspace{border-right:none;border-bottom:none}
+      .preset-strip{left:10px;right:10px;top:10px;max-height:208px}
+      .trash-drop{left:10px;bottom:10px}
+      .preset-buttons{grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:94px}
+    }
+  </style>
+</head>
+<body>
+  <div class="app" id="app">
+    <section class="workspace">
+      <svg id="canvas" viewBox="0 0 1200 800" aria-label="Track design canvas">
+        <defs>
+          <pattern id="smallGrid" width="10" height="10" patternUnits="userSpaceOnUse">
+            <path d="M 10 0 L 0 0 0 10" fill="none" stroke="#e7ddcf" stroke-width="0.8" />
+          </pattern>
+          <pattern id="bigGrid" width="50" height="50" patternUnits="userSpaceOnUse">
+            <rect width="50" height="50" fill="url(#smallGrid)" />
+            <path d="M 50 0 L 0 0 0 50" fill="none" stroke="#dacbb7" stroke-width="1.2" />
+          </pattern>
+        </defs>
+        <g id="uiUnderlayLayer"></g>
+        <g id="worldLayer">
+          <rect x="0" y="0" width="1200" height="800" fill="url(#bigGrid)" />
+          <g id="pieceLayer"></g>
+          <g id="trackOverlayLayer"></g>
+          <g id="fxLayer"></g>
+        </g>
+      </svg>
+      <div class="preset-strip">
+        <div id="presetButtons" class="preset-buttons" aria-label="Parts buttons"></div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+  (() => {
+    'use strict';
+
+    const PRESETS = [
+      { code:'A',  centreLength:144.0, radiusValue:null, angleDeg:0, startConnector:'male',   endConnector:'female', notes:'Standard medium straight' },
+      { code:'B',  centreLength:144.0, radiusValue:null, angleDeg:0, startConnector:'male',   endConnector:'male',   notes:'Same length as A' },
+      { code:'C',  centreLength:144.0, radiusValue:null, angleDeg:0, startConnector:'female', endConnector:'female', notes:'Same length as A' },
+      { code:'A1', centreLength:108.0, radiusValue:null, angleDeg:0, startConnector:'male',   endConnector:'female', notes:'Standard short straight' },
+      { code:'B1', centreLength:108.0, radiusValue:null, angleDeg:0, startConnector:'male',   endConnector:'male',   notes:'Same length as A1' },
+      { code:'C1', centreLength:108.0, radiusValue:null, angleDeg:0, startConnector:'female', endConnector:'female', notes:'Same length as A1' },
+      { code:'A2', centreLength:54.0,  radiusValue:null, angleDeg:0, startConnector:'male',   endConnector:'female', notes:'Mini straight' },
+      { code:'B2', centreLength:54.0,  radiusValue:null, angleDeg:0, startConnector:'male',   endConnector:'male',   notes:'Same length as A2' },
+      { code:'C2', centreLength:54.0,  radiusValue:null, angleDeg:0, startConnector:'female', endConnector:'female', notes:'Same length as A2' },
+      { code:'A3', centreLength:72.0,  radiusValue:null, angleDeg:0, startConnector:'male',   endConnector:'female', notes:'Middle straight' },
+      { code:'D',  centreLength:216.0, radiusValue:null, angleDeg:0, startConnector:'male',   endConnector:'female', notes:'Long straight' },
+      { code:'E',  centreLength:158.7, radiusValue:202,  angleDeg:(158.7/202) * 180 / Math.PI, startConnector:'male', endConnector:'female', notes:'Large 45° curve' },
+      { code:'E1', centreLength:86.4,  radiusValue:110,  angleDeg:(86.4/110) * 180 / Math.PI,  startConnector:'male', endConnector:'female', notes:'Short 45° curve' },
+      { code:'X',  compositeKind:'crossA1', centreLength:108.0, radiusValue:null, angleDeg:0, startConnector:'male', endConnector:'female', notes:'Cross piece: two A1-like arms at 90°' }
+    ];
+
+    const CONFIG = {
+      railOffset: 13,
+      railWidth: 6,
+      outerOffset: 20,
+      outerWidth: 0.5,
+      connectorHeadRadius: 6.25,
+      connectorNeckWidth: 6.2,
+      connectorThroatWidth: 6.8,
+      connectorDepth: 12,
+      connectorClearance: 0.35,
+      centreWidth: 1.4,
+      newPieceOrigin: { x: 360, y: 370 },
+      spawnStep: { x: 22, y: 18 },
+      snapDistance: 22,
+      connectionEpsilon: 0.75,
+      alignmentToleranceDeg: 2,
+      dualSnapMaxResidual: 8
+    };
+
+    const dom = {
+      app: document.getElementById('app'),
+      svg: document.getElementById('canvas'),
+      workspace: document.querySelector('.workspace'),
+      worldLayer: document.getElementById('worldLayer'),
+      uiUnderlayLayer: document.getElementById('uiUnderlayLayer'),
+      pieceLayer: document.getElementById('pieceLayer'),
+      trackOverlayLayer: document.getElementById('trackOverlayLayer'),
+      fxLayer: document.getElementById('fxLayer'),
+      legend: document.getElementById('legend'),
+      presetButtons: document.getElementById('presetButtons'),
+      sidebarToggle: document.getElementById('sidebarToggle')
+    };
+
+    const state = {
+      pieceCounter: 0,
+      activePieceId: null,
+      activePresetCode: null,
+      pendingClick: null,
+      drag: null,
+      pieces: new Map(),
+      pieceTypes: new Map(),
+      geomCache: new Map(),
+      thumbCache: new Map(),
+      thumbFrame: null,
+      warningsQueued: false,
+      dragOverTrash: false,
+      panDrag: null,
+      view: { panX: 0, panY: 0, zoom: 1, minZoom: 0.35, maxZoom: 4 },
+      trashBounds: { x: 14, y: 692, width: 94, height: 94 }
+    };
+
+    const fmt = value => Number(value).toFixed(2).replace(/\.00$/, '');
+    const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+    const roundKey = value => Number(value).toFixed(4);
+    const degToRad = deg => deg * Math.PI / 180;
+    const pieceValues = () => [...state.pieces.values()];
+
+    function connectorCode(startConnector, endConnector) {
+      return `${startConnector[0].toUpperCase()}-${endConnector[0].toUpperCase()}`;
+    }
+
+    function radiusModeForValue(radiusValue) {
+      return radiusValue == null ? 'Straight' : `R${fmt(radiusValue)}`;
+    }
+
+    function buildSpec({ centreLength, angleDeg, radiusValue, startConnector='male', endConnector='female', presetCode=null, notes='', compositeKind=null }) {
+      const isStraight = compositeKind ? true : (Math.abs(angleDeg) < 1e-9 || radiusValue == null);
+      return {
+        isStraight,
+        centreLength,
+        angleDeg: isStraight ? 0 : angleDeg,
+        radiusValue: isStraight ? null : radiusValue,
+        radiusMode: compositeKind ? 'Composite' : (isStraight ? 'Straight' : radiusModeForValue(radiusValue)),
+        startConnector,
+        endConnector,
+        presetCode,
+        notes,
+        compositeKind
+      };
+    }
+
+    function presetToSpec(preset) {
+      return buildSpec(preset);
+    }
+
+    function specKey(spec) {
+      if (spec.compositeKind) {
+        return `composite|${spec.compositeKind}|${spec.presetCode || ''}`;
+      }
+      const connectorPart = `${spec.startConnector}|${spec.endConnector}`;
+      return spec.isStraight
+        ? `straight|${roundKey(spec.centreLength)}|${connectorPart}|${spec.presetCode || ''}`
+        : `curve|${roundKey(spec.radiusValue)}|${roundKey(spec.angleDeg)}|${connectorPart}|${spec.presetCode || ''}`;
+    }
+
+    function getGeometryBySpec(spec) {
+      const key = spec.key || specKey(spec);
+      if (!state.geomCache.has(key)) {
+        state.geomCache.set(
+          key,
+          spec.compositeKind === 'crossA1'
+            ? geometryForCrossA1Spec(spec)
+            : geometryForSpec(spec.centreLength, spec.angleDeg, spec.radiusValue, spec.startConnector, spec.endConnector)
+        );
+      }
+      return state.geomCache.get(key);
+    }
+
+    function ensureType(spec) {
+      const key = specKey(spec);
+      let type = state.pieceTypes.get(key);
+      if (!type) {
+        type = { ...spec, key, pieces: [], expanded: false };
+        state.pieceTypes.set(key, type);
+      }
+      return type;
+    }
+
+    function getTypeGeometry(type) {
+      return getGeometryBySpec(type);
+    }
+
+    function svgPoint(clientX, clientY) {
+      const pt = dom.svg.createSVGPoint();
+      pt.x = clientX;
+      pt.y = clientY;
+      const out = pt.matrixTransform(dom.svg.getScreenCTM().inverse());
+      return { x: out.x, y: out.y };
+    }
+
+    function rotatePoint(point, angleDeg) {
+      const a = degToRad(angleDeg), c = Math.cos(a), s = Math.sin(a);
+      return { x: point.x * c - point.y * s, y: point.x * s + point.y * c };
+    }
+
+    function worldConnectorPoint(piece, localPoint) {
+      const rotated = rotatePoint(localPoint, piece.rotation);
+      return { x: piece.x + rotated.x, y: piece.y + rotated.y };
+    }
+
+    function normalizeVector(v) {
+      const len = Math.hypot(v.x, v.y) || 1;
+      return { x: v.x / len, y: v.y / len };
+    }
+
+    function worldDirection(piece, localDirection) {
+      return normalizeVector(rotatePoint(localDirection, piece.rotation));
+    }
+
+    function distance(a, b) {
+      return Math.hypot(a.x - b.x, a.y - b.y);
+    }
+
+    function areConnectorDirectionsAligned(aWorldDir, bWorldDir) {
+      const dot = aWorldDir.x * bWorldDir.x + aWorldDir.y * bWorldDir.y;
+      return dot <= -Math.cos(degToRad(CONFIG.alignmentToleranceDeg));
+    }
+
+    function pointOnPath(centreLength, angleDeg, radiusValue, s) {
+      if (Math.abs(angleDeg) < 1e-9 || radiusValue == null) {
+        return { p: { x: s, y: 0 }, t: { x: 1, y: 0 }, n: { x: 0, y: 1 } };
+      }
+      const theta = degToRad(angleDeg);
+      const k = Math.sign(theta) / radiusValue;
+      const a = k * s;
+      return {
+        p: { x: Math.sin(a) / k, y: (1 - Math.cos(a)) / k },
+        t: { x: Math.cos(a), y: Math.sin(a) },
+        n: { x: -Math.sin(a), y: Math.cos(a) }
+      };
+    }
+
+    function samplePath(centreLength, angleDeg, radiusValue) {
+      const steps = Math.max(24, Math.ceil(centreLength / 6), Math.ceil(Math.abs(angleDeg) / 5));
+      const centre = new Array(steps + 1);
+      const normals = new Array(steps + 1);
+      for (let i = 0; i <= steps; i++) {
+        const s = centreLength * (i / steps);
+        const sample = pointOnPath(centreLength, angleDeg, radiusValue, s);
+        centre[i] = sample.p;
+        normals[i] = sample.n;
+      }
+      return { centre, normals };
+    }
+
+    function offsetPoints(points, normals, offset) {
+      const out = new Array(points.length);
+      for (let i = 0; i < points.length; i++) {
+        out[i] = { x: points[i].x + normals[i].x * offset, y: points[i].y + normals[i].y * offset };
+      }
+      return out;
+    }
+
+    function polylineD(points) {
+      let out = '';
+      for (let i = 0; i < points.length; i++) out += `${i ? ' L ' : 'M '}${points[i].x.toFixed(3)} ${points[i].y.toFixed(3)}`;
+      return out;
+    }
+
+    function polygonD(points) {
+      return polylineD(points) + ' Z';
+    }
+
+    function reversedPolygonD(points) {
+      return polylineD([...points].reverse()) + ' Z';
+    }
+
+    function circlePath(cx, cy, r, reverse=false) {
+      const sweep = reverse ? 1 : 0;
+      return `M ${(cx + r).toFixed(3)} ${cy.toFixed(3)} A ${r.toFixed(3)} ${r.toFixed(3)} 0 1 ${sweep} ${(cx - r).toFixed(3)} ${cy.toFixed(3)} A ${r.toFixed(3)} ${r.toFixed(3)} 0 1 ${sweep} ${(cx + r).toFixed(3)} ${cy.toFixed(3)} Z`;
+    }
+
+    function lineD(a, b) {
+      return `M ${a.x.toFixed(3)} ${a.y.toFixed(3)} L ${b.x.toFixed(3)} ${b.y.toFixed(3)}`;
+    }
+
+    function orientedPoint(origin, tangent, normal, x, y) {
+      return { x: origin.x + tangent.x * x + normal.x * y, y: origin.y + tangent.y * x + normal.y * y };
+    }
+
+    function orientedRectPoints(origin, tangent, normal, x0, x1, halfWidth) {
+      return [
+        orientedPoint(origin, tangent, normal, x0, -halfWidth),
+        orientedPoint(origin, tangent, normal, x1, -halfWidth),
+        orientedPoint(origin, tangent, normal, x1, halfWidth),
+        orientedPoint(origin, tangent, normal, x0, halfWidth)
+      ];
+    }
+
+    function boundsFromPoints(points) {
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (const p of points) {
+        if (p.x < minX) minX = p.x;
+        if (p.y < minY) minY = p.y;
+        if (p.x > maxX) maxX = p.x;
+        if (p.y > maxY) maxY = p.y;
+      }
+      return { minX, minY, maxX, maxY };
+    }
+
+    function expandBoundsWithCircle(bounds, centre, radius) {
+      bounds.minX = Math.min(bounds.minX, centre.x - radius);
+      bounds.minY = Math.min(bounds.minY, centre.y - radius);
+      bounds.maxX = Math.max(bounds.maxX, centre.x + radius);
+      bounds.maxY = Math.max(bounds.maxY, centre.y + radius);
+    }
+
+    function connectorGeometryAtEnd(sample, side, kind) {
+      const headRadius = CONFIG.connectorHeadRadius;
+      const femaleRadius = headRadius + CONFIG.connectorClearance;
+      const neckHalf = CONFIG.connectorNeckWidth / 2;
+      const throatHalf = CONFIG.connectorThroatWidth / 2;
+      const maleJoin = Math.sqrt(Math.max(0, headRadius * headRadius - neckHalf * neckHalf));
+      const femaleJoin = Math.sqrt(Math.max(0, femaleRadius * femaleRadius - throatHalf * throatHalf));
+      const maleNeckLength = Math.max(0, CONFIG.connectorDepth - maleJoin);
+      const femaleThroatLength = Math.max(0, CONFIG.connectorDepth - femaleJoin);
+      const outward = side === 'start' ? -1 : 1;
+      const connectorCentre = kind === 'male'
+        ? { x: sample.p.x + sample.t.x * (outward * CONFIG.connectorDepth), y: sample.p.y + sample.t.y * (outward * CONFIG.connectorDepth) }
+        : { x: sample.p.x - sample.t.x * (outward * CONFIG.connectorDepth), y: sample.p.y - sample.t.y * (outward * CONFIG.connectorDepth) };
+
+      if (kind === 'male') {
+        const x0 = side === 'start' ? -maleNeckLength : 0;
+        const x1 = side === 'start' ? 0 : maleNeckLength;
+        const neckPoints = orientedRectPoints(sample.p, sample.t, sample.n, x0, x1, neckHalf);
+        const shoulderTop = orientedPoint(sample.p, sample.t, sample.n, 0, neckHalf);
+        const shoulderBottom = orientedPoint(sample.p, sample.t, sample.n, 0, -neckHalf);
+        return {
+          kind, side, centre: connectorCentre,
+          direction: { x: sample.t.x * outward, y: sample.t.y * outward },
+          fillPaths: [polygonD(neckPoints), circlePath(connectorCentre.x, connectorCentre.y, headRadius)],
+          outlinePaths: [polygonD(neckPoints), circlePath(connectorCentre.x, connectorCentre.y, headRadius)],
+          hitPaths: [polygonD(neckPoints), circlePath(connectorCentre.x, connectorCentre.y, headRadius)],
+          shoulderD: `${lineD(sample.edgeTop, shoulderTop)} ${lineD(shoulderBottom, sample.edgeBottom)}`,
+          capD: '', maskPaths: [], negativeFillPaths: [], boundsPoints: neckPoints, headRadius
+        };
+      }
+
+      const x0 = side === 'start' ? 0 : -femaleThroatLength;
+      const x1 = side === 'start' ? femaleThroatLength : 0;
+      const throatPoints = orientedRectPoints(sample.p, sample.t, sample.n, x0, x1, throatHalf);
+      return {
+        kind, side, centre: connectorCentre,
+        direction: { x: sample.t.x * outward, y: sample.t.y * outward },
+        fillPaths: [], outlinePaths: [], hitPaths: [], shoulderD: '',
+        capD: lineD(sample.edgeTop, sample.edgeBottom),
+        maskPaths: [circlePath(connectorCentre.x, connectorCentre.y, femaleRadius), polygonD(throatPoints)],
+        negativeFillPaths: [circlePath(connectorCentre.x, connectorCentre.y, femaleRadius, true), reversedPolygonD(throatPoints)],
+        boundsPoints: [], headRadius: 0
+      };
+    }
+
+    function geometryForSpec(centreLength, angleDeg, radiusValue, startConnector, endConnector) {
+      const sampled = samplePath(centreLength, angleDeg, radiusValue);
+      const centre = sampled.centre;
+      const normals = sampled.normals;
+      const railLeft = offsetPoints(centre, normals, CONFIG.railOffset);
+      const railRight = offsetPoints(centre, normals, -CONFIG.railOffset);
+      const edgeLeft = offsetPoints(centre, normals, CONFIG.outerOffset);
+      const edgeRight = offsetPoints(centre, normals, -CONFIG.outerOffset);
+
+      const startSample = pointOnPath(centreLength, angleDeg, radiusValue, 0);
+      const endSample = pointOnPath(centreLength, angleDeg, radiusValue, centreLength);
+      startSample.edgeTop = edgeLeft[0];
+      startSample.edgeBottom = edgeRight[0];
+      endSample.edgeTop = edgeLeft[edgeLeft.length - 1];
+      endSample.edgeBottom = edgeRight[edgeRight.length - 1];
+
+      const startGeom = connectorGeometryAtEnd(startSample, 'start', startConnector);
+      const endGeom = connectorGeometryAtEnd(endSample, 'end', endConnector);
+
+      const bodyOutline = edgeLeft.concat([...edgeRight].reverse());
+      const thumbBounds = boundsFromPoints(bodyOutline);
+      for (const connector of [startGeom, endGeom]) {
+        for (const p of connector.boundsPoints) {
+          thumbBounds.minX = Math.min(thumbBounds.minX, p.x);
+          thumbBounds.minY = Math.min(thumbBounds.minY, p.y);
+          thumbBounds.maxX = Math.max(thumbBounds.maxX, p.x);
+          thumbBounds.maxY = Math.max(thumbBounds.maxY, p.y);
+        }
+        if (connector.kind === 'male' && connector.headRadius > 0) expandBoundsWithCircle(thumbBounds, connector.centre, connector.headRadius);
+      }
+
+      return {
+        centreD: polylineD(centre),
+        railLeftD: polylineD(railLeft),
+        railRightD: polylineD(railRight),
+        edgeLeftD: polylineD(edgeLeft),
+        edgeRightD: polylineD(edgeRight),
+        bodyPolygonD: polygonD(bodyOutline),
+        hitPath: polygonD(bodyOutline),
+        startGeom,
+        endGeom,
+        connectorPoints: [startGeom, endGeom].map(connector => ({ kind: connector.kind, local: connector.centre, direction: connector.direction, side: connector.side })),
+        thumbBounds
+      };
+    }
+
+    function transformLocalPoint(point, tx=0, ty=0, rotationDeg=0) {
+      const rotated = rotatePoint(point, rotationDeg);
+      return { x: rotated.x + tx, y: rotated.y + ty };
+    }
+
+    function transformBounds(bounds, tx=0, ty=0, rotationDeg=0) {
+      const corners = [
+        { x: bounds.minX, y: bounds.minY },
+        { x: bounds.maxX, y: bounds.minY },
+        { x: bounds.maxX, y: bounds.maxY },
+        { x: bounds.minX, y: bounds.maxY }
+      ].map(point => transformLocalPoint(point, tx, ty, rotationDeg));
+      return boundsFromPoints(corners);
+    }
+
+    function mergeBounds(boundsList) {
+      const merged = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+      for (const bounds of boundsList) {
+        merged.minX = Math.min(merged.minX, bounds.minX);
+        merged.minY = Math.min(merged.minY, bounds.minY);
+        merged.maxX = Math.max(merged.maxX, bounds.maxX);
+        merged.maxY = Math.max(merged.maxY, bounds.maxY);
+      }
+      return merged;
+    }
+
+    function baseA1Type() {
+      return { ...presetToSpec(PRESETS.find(preset => preset.code === 'A1')), key: 'internal-a1-base' };
+    }
+
+    function geometryForCrossA1Spec(spec) {
+      const baseType = { ...baseA1Type(), centreLength: 116, key: 'internal-cross-arm-116' };
+      const baseGeom = getGeometryBySpec(baseType);
+      const halfLength = baseType.centreLength / 2;
+      const components = [
+        { tx: -halfLength, ty: 0, rotation: 0, idSuffix: 'h' },
+        { tx: 0, ty: -halfLength, rotation: 90, idSuffix: 'v' }
+      ];
+      const connectorPoints = [];
+      const boundsList = [];
+      for (const component of components) {
+        boundsList.push(transformBounds(baseGeom.thumbBounds, component.tx, component.ty, component.rotation));
+        for (const connector of baseGeom.connectorPoints) {
+          connectorPoints.push({
+            kind: connector.kind,
+            local: transformLocalPoint(connector.local, component.tx, component.ty, component.rotation),
+            direction: rotatePoint(connector.direction, component.rotation),
+            side: connector.side
+          });
+        }
+      }
+      return {
+        compositeKind: 'crossA1',
+        baseType,
+        components,
+        connectorPoints,
+        thumbBounds: mergeBounds(boundsList)
+      };
+    }
+
+    function connectorFillMarkup(paths) {
+      return paths.map(d => `<path d="${d}" fill="var(--piece-fill)" stroke="none"></path>`).join('');
+    }
+
+    function connectorHitMarkup(paths) {
+      return paths.map(d => `<path d="${d}" class="hit" fill="rgba(0,0,0,0.001)" stroke="none"></path>`).join('');
+    }
+
+    function connectorOutlineMarkup(connector, edgeColor='var(--edge)') {
+      const paths = connector.outlinePaths.map(d => `<path d="${d}" fill="none" stroke="${edgeColor}" stroke-width="${CONFIG.outerWidth}" stroke-linejoin="round" stroke-linecap="round"></path>`).join('');
+      const shoulders = connector.shoulderD ? `<path d="${connector.shoulderD}" fill="none" stroke="${edgeColor}" stroke-width="${CONFIG.outerWidth}" stroke-linejoin="round" stroke-linecap="round"></path>` : '';
+      return paths + shoulders;
+    }
+
+    function femaleDefsMarkup(maskId, clipBase, connector) {
+      const cutoutClipId = `${clipBase}-cutout`;
+      const holeMaskId = `${clipBase}-hole-mask`;
+      const throatMaskId = `${clipBase}-throat-mask`;
+      return {
+        cutoutClipId,
+        holeMaskId,
+        throatMaskId,
+        markup:
+          `<clipPath id="${cutoutClipId}" clipPathUnits="userSpaceOnUse">${connector.maskPaths.map(d => `<path d="${d}"></path>`).join('')}</clipPath>` +
+          `<mask id="${holeMaskId}" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse"><rect x="-10000" y="-10000" width="20000" height="20000" fill="white"></rect>${connector.maskPaths[1] ? `<path d="${connector.maskPaths[1]}" fill="black"></path>` : ''}</mask>` +
+          `<mask id="${throatMaskId}" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse"><rect x="-10000" y="-10000" width="20000" height="20000" fill="white"></rect>${connector.maskPaths[0] ? `<path d="${connector.maskPaths[0]}" fill="black"></path>` : ''}</mask>`
+      };
+    }
+
+    function buildTrackOverlayMarkup(type, includeHits=true) {
+      const geom = getTypeGeometry(type);
+      if (geom.compositeKind === 'crossA1') {
+        return geom.components.map(component =>
+          `<g transform="translate(${component.tx.toFixed(3)} ${component.ty.toFixed(3)}) rotate(${component.rotation.toFixed(3)})">${buildTrackOverlayMarkup(geom.baseType, includeHits)}</g>`
+        ).join('');
+      }
+      let markup = '';
+      if (includeHits) {
+        markup += `<path d="${geom.hitPath}" class="hit" fill="rgba(0,0,0,0.001)" stroke="none"></path>` + connectorHitMarkup(geom.startGeom.hitPaths) + connectorHitMarkup(geom.endGeom.hitPaths);
+      }
+      markup += `<path d="${geom.railLeftD}" fill="none" stroke="var(--rail)" stroke-width="${CONFIG.railWidth}" stroke-linecap="butt" stroke-linejoin="round"></path>` +
+        `<path d="${geom.railRightD}" fill="none" stroke="var(--rail)" stroke-width="${CONFIG.railWidth}" stroke-linecap="butt" stroke-linejoin="round"></path>` +
+        `<path d="${geom.centreD}" fill="none" stroke="var(--centre)" stroke-width="${CONFIG.centreWidth}" stroke-linecap="round" stroke-linejoin="round"></path>`;
+      return markup;
+    }
+
+    function buildPieceMarkup(type, idBase, includeHits) {
+      const geom = getTypeGeometry(type);
+      if (geom.compositeKind === 'crossA1') {
+        return geom.components.map(component =>
+          `<g transform="translate(${component.tx.toFixed(3)} ${component.ty.toFixed(3)}) rotate(${component.rotation.toFixed(3)})">${buildPieceMarkup(geom.baseType, `${idBase}-${component.idSuffix}`, false)}</g>`
+        ).join('');
+      }
+      const maskId = `${idBase}-piece-mask`;
+      const fillMaskId = `${idBase}-fill-mask`;
+      const femaleUi = [];
+      let extraDefs = '';
+      for (const connector of [geom.startGeom, geom.endGeom]) {
+        if (connector.kind !== 'female') continue;
+        const ids = femaleDefsMarkup(maskId, `${idBase}-${connector.side}`, connector);
+        extraDefs += ids.markup;
+        femaleUi.push({ connector, ids });
+      }
+
+      let markup = '<defs>' +
+        `<mask id="${maskId}" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse"><rect x="-10000" y="-10000" width="20000" height="20000" fill="white"></rect>${[...geom.startGeom.maskPaths, ...geom.endGeom.maskPaths].map(d => `<path d="${d}" fill="black"></path>`).join('')}</mask>` +
+        `<mask id="${fillMaskId}" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse"><rect x="-10000" y="-10000" width="20000" height="20000" fill="black"></rect><path d="${geom.bodyPolygonD}" fill="white" stroke="white" stroke-width="${CONFIG.outerWidth}" stroke-linejoin="round" stroke-linecap="round"></path>${geom.startGeom.fillPaths.map(d => `<path d="${d}" fill="white" stroke="white" stroke-width="${CONFIG.outerWidth}" stroke-linejoin="round" stroke-linecap="round"></path>`).join('')}${geom.endGeom.fillPaths.map(d => `<path d="${d}" fill="white" stroke="white" stroke-width="${CONFIG.outerWidth}" stroke-linejoin="round" stroke-linecap="round"></path>`).join('')}${[...geom.startGeom.maskPaths, ...geom.endGeom.maskPaths].map(d => `<path d="${d}" fill="black" stroke="black" stroke-width="${CONFIG.outerWidth}" stroke-linejoin="round" stroke-linecap="round"></path>`).join('')}</mask>` +
+        extraDefs +
+        '</defs>' +
+        `<rect x="-10000" y="-10000" width="20000" height="20000" fill="var(--piece-fill)" mask="url(#${fillMaskId})"></rect>` +
+        `<path d="${geom.edgeLeftD}" fill="none" stroke="var(--edge)" stroke-width="${CONFIG.outerWidth}" stroke-linecap="round" stroke-linejoin="round"></path>` +
+        `<path d="${geom.edgeRightD}" fill="none" stroke="var(--edge)" stroke-width="${CONFIG.outerWidth}" stroke-linecap="round" stroke-linejoin="round"></path>` +
+        '<g>' + connectorOutlineMarkup(geom.startGeom) + connectorOutlineMarkup(geom.endGeom);
+
+      for (const connector of [geom.startGeom, geom.endGeom]) {
+        if (connector.capD) markup += `<path d="${connector.capD}" fill="none" stroke="var(--edge)" stroke-width="${CONFIG.outerWidth}" stroke-linecap="round" mask="url(#${maskId})"></path>`;
+      }
+      for (const { connector, ids } of femaleUi) {
+        if (connector.maskPaths[0]) markup += `<path d="${connector.maskPaths[0]}" fill="none" stroke="var(--edge)" stroke-width="${CONFIG.outerWidth * 2}" stroke-linecap="round" stroke-linejoin="round" clip-path="url(#${ids.cutoutClipId})" mask="url(#${ids.holeMaskId})"></path>`;
+        if (connector.maskPaths[1]) markup += `<path d="${connector.maskPaths[1]}" fill="none" stroke="var(--edge)" stroke-width="${CONFIG.outerWidth * 2}" stroke-linecap="round" stroke-linejoin="round" clip-path="url(#${ids.cutoutClipId})" mask="url(#${ids.throatMaskId})"></path>`;
+      }
+      markup += '</g>';
+
+      if (includeHits) {
+        markup += `<path d="${geom.hitPath}" class="hit" fill="rgba(0,0,0,0.001)" stroke="none"></path>` + connectorHitMarkup(geom.startGeom.hitPaths) + connectorHitMarkup(geom.endGeom.hitPaths);
+      }
+      return markup;
+    }
+
+    function svgUiPoint(clientX, clientY) {
+      return svgPoint(clientX, clientY);
+    }
+
+    function worldPointFromClient(clientX, clientY) {
+      const p = svgUiPoint(clientX, clientY);
+      return {
+        x: (p.x - state.view.panX) / state.view.zoom,
+        y: (p.y - state.view.panY) / state.view.zoom
+      };
+    }
+
+    function renderViewTransform() {
+      if (!dom.worldLayer) return;
+      dom.worldLayer.setAttribute('transform', `translate(${state.view.panX.toFixed(3)} ${state.view.panY.toFixed(3)}) scale(${state.view.zoom.toFixed(5)})`);
+    }
+
+    function trashMarkup(active=false) {
+      const fill = active ? 'rgba(180,35,24,.12)' : 'rgba(255,250,242,.94)';
+      const stroke = active ? 'rgba(180,35,24,.45)' : 'rgba(0,0,0,.09)';
+      const text = active ? '#8b1e12' : '#6f6255';
+      const x = state.trashBounds.x;
+      const y = state.trashBounds.y;
+      return `
+        <g id="trashDrop" transform="translate(${x} ${y})" aria-hidden="true">
+          <rect x="0" y="0" width="${state.trashBounds.width}" height="${state.trashBounds.height}" rx="12" ry="12" fill="${fill}" stroke="${stroke}" stroke-width="1"></rect>
+          <g transform="translate(28 20)">
+            <path d="M22 12h20l2 6h10v4H10v-4h10l2-6zm3 0-1.3 4h16.6L39 12H25zm-6 14h26l-2.8 26a6 6 0 0 1-6 5.4H27.8a6 6 0 0 1-6-5.4L19 26zm8 6v16m10-16v16" fill="none" stroke="${text}" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"></path>
+          </g>
+        </g>`;
+    }
+
+    function renderTrashDrop() {
+      if (dom.uiUnderlayLayer) dom.uiUnderlayLayer.innerHTML = trashMarkup(state.dragOverTrash);
+    }
+
+    function isSvgPointOverTrash(point) {
+      const b = state.trashBounds;
+      return point.x >= b.x && point.x <= b.x + b.width && point.y >= b.y && point.y <= b.y + b.height;
+    }
+
+    function queueWarningsUpdate() {
+      if (state.warningsQueued) return;
+      state.warningsQueued = true;
+      requestAnimationFrame(() => {
+        state.warningsQueued = false;
+        updateConnectionWarnings();
+      });
+    }
+
+    function updatePieceTransform(piece) {
+      const transform = `translate(${piece.x.toFixed(3)} ${piece.y.toFixed(3)}) rotate(${piece.rotation.toFixed(3)})`;
+      piece.el.setAttribute('transform', transform);
+      if (piece.overlayEl) piece.overlayEl.setAttribute('transform', transform);
+      piece.el.style.display = piece.visible ? '' : 'none';
+      if (piece.overlayEl) piece.overlayEl.style.display = piece.visible ? '' : 'none';
+      piece.el.classList.toggle('is-active', piece.id === state.activePieceId);
+      if (piece.overlayEl) piece.overlayEl.classList.toggle('is-active', piece.id === state.activePieceId);
+      queueWarningsUpdate();
+    }
+
+    function renderPiece(piece) {
+      piece.connectors = getTypeGeometry(piece.type).connectorPoints;
+      piece.renderVersion = (piece.renderVersion || 0) + 1;
+      piece.el.innerHTML = buildPieceMarkup(piece.type, `piece-${piece.id}-${piece.renderVersion}`, true);
+      if (piece.overlayEl) piece.overlayEl.innerHTML = buildTrackOverlayMarkup(piece.type, true);
+      updatePieceTransform(piece);
+    }
+
+    function selectPiece(piece) {
+      if (!piece) return;
+      state.activePieceId = piece.id;
+      dom.pieceLayer.appendChild(piece.el);
+      if (piece.overlayEl) dom.trackOverlayLayer.appendChild(piece.overlayEl);
+      for (const other of pieceValues()) other.el.classList.toggle('is-active', other.id === piece.id);
+      renderLegend();
+    }
+
+    function movePieceToType(piece, nextSpec) {
+      const oldType = piece.type;
+      oldType.pieces = oldType.pieces.filter(p => p.id !== piece.id);
+      if (!oldType.pieces.length) state.pieceTypes.delete(oldType.key);
+      const nextType = ensureType(nextSpec);
+      nextType.pieces.push(piece);
+      piece.type = nextType;
+      piece.isStraight = nextType.isStraight;
+      piece.angleDeg = nextType.angleDeg;
+      piece.radiusValue = nextType.radiusValue;
+      piece.centreLength = nextType.centreLength;
+      piece.startConnector = nextType.startConnector;
+      piece.endConnector = nextType.endConnector;
+      piece.presetCode = nextType.presetCode;
+      piece.notes = nextType.notes;
+      piece.compositeKind = nextType.compositeKind;
+      return nextType;
+    }
+
+    function createPiece(type, options={}) {
+      const piece = {
+        id: ++state.pieceCounter,
+        type,
+        isStraight: type.isStraight,
+        angleDeg: type.angleDeg,
+        radiusValue: type.radiusValue,
+        centreLength: type.centreLength,
+        startConnector: type.startConnector,
+        endConnector: type.endConnector,
+        presetCode: type.presetCode,
+        notes: type.notes,
+        compositeKind: type.compositeKind,
+        visible: options.visible ?? true,
+        x: options.x ?? CONFIG.newPieceOrigin.x + type.pieces.length * CONFIG.spawnStep.x,
+        y: options.y ?? CONFIG.newPieceOrigin.y + type.pieces.length * CONFIG.spawnStep.y,
+        rotation: options.rotation ?? 0,
+        renderVersion: 0,
+        connectors: [],
+        label: type.presetCode ? `${type.presetCode} ${state.pieceCounter}` : `Piece ${state.pieceCounter}`
+      };
+      piece.el = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      piece.el.classList.add('piece');
+      piece.el.dataset.pieceId = String(piece.id);
+      piece.overlayEl = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      piece.overlayEl.classList.add('piece-overlay');
+      piece.overlayEl.dataset.pieceId = String(piece.id);
+      type.pieces.push(piece);
+      state.pieces.set(piece.id, piece);
+      dom.pieceLayer.appendChild(piece.el);
+      dom.trackOverlayLayer.appendChild(piece.overlayEl);
+      renderPiece(piece);
+      selectPiece(piece);
+      return piece;
+    }
+
+    function deletePiece(pieceId) {
+      const piece = state.pieces.get(pieceId);
+      if (!piece) return;
+      if (state.activePieceId === pieceId) state.activePieceId = null;
+      piece.type.pieces = piece.type.pieces.filter(p => p.id !== pieceId);
+      if (!piece.type.pieces.length) state.pieceTypes.delete(piece.type.key);
+      state.pieces.delete(pieceId);
+      piece.el.remove();
+      if (piece.overlayEl) piece.overlayEl.remove();
+      renderLegend();
+      queueWarningsUpdate();
+    }
+
+    function rotatePiece(piece, direction=1) {
+      if (!piece) return;
+      const step = piece.isStraight ? 45 : (piece.angleDeg < 0 ? -45 : 45);
+      piece.rotation += step * direction;
+      updatePieceTransform(piece);
+      renderLegend();
+    }
+
+    function flipPieceAngle(piece) {
+      if (!piece || piece.compositeKind || piece.isStraight || Math.abs(piece.angleDeg) < 1e-9) return;
+      const nextSpec = buildSpec({
+        centreLength: piece.centreLength,
+        angleDeg: -piece.angleDeg,
+        radiusValue: piece.radiusValue,
+        startConnector: piece.startConnector,
+        endConnector: piece.endConnector,
+        presetCode: piece.presetCode,
+        notes: piece.notes
+      });
+      movePieceToType(piece, nextSpec);
+      renderPiece(piece);
+      renderLegend();
+    }
+
+    function buildSnapMatches(piece) {
+      const matches = [];
+      for (let ownIndex = 0; ownIndex < piece.connectors.length; ownIndex++) {
+        const own = piece.connectors[ownIndex];
+        const ownWorld = worldConnectorPoint(piece, own.local);
+        const ownDir = worldDirection(piece, own.direction);
+        for (const other of pieceValues()) {
+          if (other.id === piece.id || !other.visible) continue;
+          for (let targetIndex = 0; targetIndex < other.connectors.length; targetIndex++) {
+            const target = other.connectors[targetIndex];
+            if (own.kind === target.kind) continue;
+            const targetDir = worldDirection(other, target.direction);
+            if (!areConnectorDirectionsAligned(ownDir, targetDir)) continue;
+            const targetWorld = worldConnectorPoint(other, target.local);
+            const offset = { x: targetWorld.x - ownWorld.x, y: targetWorld.y - ownWorld.y };
+            const d = Math.hypot(offset.x, offset.y);
+            if (d > CONFIG.snapDistance) continue;
+            matches.push({
+              ownIndex,
+              ownLocal: own.local,
+              targetPieceId: other.id,
+              targetIndex,
+              targetWorld,
+              offset,
+              distance: d
+            });
+          }
+        }
+      }
+      return matches;
+    }
+
+    function findSnapCandidate(piece) {
+      const matches = buildSnapMatches(piece);
+      let bestDouble = null;
+      for (let i = 0; i < matches.length; i++) {
+        const a = matches[i];
+        for (let j = i + 1; j < matches.length; j++) {
+          const b = matches[j];
+          if (a.ownIndex === b.ownIndex) continue;
+          if (a.targetPieceId === b.targetPieceId && a.targetIndex === b.targetIndex) continue;
+          const offset = {
+            x: (a.offset.x + b.offset.x) / 2,
+            y: (a.offset.y + b.offset.y) / 2
+          };
+          const residualA = Math.hypot(offset.x - a.offset.x, offset.y - a.offset.y);
+          const residualB = Math.hypot(offset.x - b.offset.x, offset.y - b.offset.y);
+          const maxResidual = Math.max(residualA, residualB);
+          if (maxResidual > CONFIG.dualSnapMaxResidual) continue;
+          const score = maxResidual * 4 + (residualA + residualB) + Math.hypot(offset.x, offset.y) * 0.05;
+          if (!bestDouble || score < bestDouble.score) {
+            bestDouble = { kind: 'double', offset, score };
+          }
+        }
+      }
+      if (bestDouble) return bestDouble;
+      let bestSingle = null;
+      for (const match of matches) {
+        if (!bestSingle || match.distance < bestSingle.distance) {
+          bestSingle = { kind: 'single', offset: match.offset, distance: match.distance };
+        }
+      }
+      return bestSingle;
+    }
+
+    function snapPiece(piece) {
+      const candidate = findSnapCandidate(piece);
+      if (!candidate) return false;
+      piece.x += candidate.offset.x;
+      piece.y += candidate.offset.y;
+      updatePieceTransform(piece);
+      return true;
+    }
+
+    function clearWarnings() {
+      dom.fxLayer.textContent = '';
+    }
+
+    function drawExplosionMarker(point) {
+      const spikes = 10, outer = 11, inner = 5.5;
+      let burstPoints = '';
+      for (let i = 0; i < spikes * 2; i++) {
+        const r = i % 2 === 0 ? outer : inner;
+        const a = -Math.PI / 2 + i * Math.PI / spikes;
+        burstPoints += `${i ? ' ' : ''}${(Math.cos(a) * r).toFixed(3)},${(Math.sin(a) * r).toFixed(3)}`;
+      }
+      dom.fxLayer.insertAdjacentHTML('beforeend',
+        `<g transform="translate(${point.x.toFixed(3)} ${point.y.toFixed(3)})" pointer-events="none"><polygon points="${burstPoints}" fill="#ffb11b" stroke="#c2410c" stroke-width="1.2"></polygon><circle cx="0" cy="0" r="3.1" fill="#fff4cf"></circle><text x="0" y="1.2" text-anchor="middle" dominant-baseline="middle" font-size="8.5" font-weight="900" fill="#7c2d12">!</text></g>`
+      );
+    }
+
+    function updateConnectionWarnings() {
+      clearWarnings();
+      const pieces = pieceValues().filter(piece => piece.visible);
+      for (let i = 0; i < pieces.length; i++) {
+        const aPiece = pieces[i];
+        for (let j = i + 1; j < pieces.length; j++) {
+          const bPiece = pieces[j];
+          for (const a of aPiece.connectors) {
+            const aPoint = worldConnectorPoint(aPiece, a.local);
+            const aDir = worldDirection(aPiece, a.direction);
+            for (const b of bPiece.connectors) {
+              if (a.kind === b.kind) continue;
+              const bPoint = worldConnectorPoint(bPiece, b.local);
+              if (distance(aPoint, bPoint) > CONFIG.connectionEpsilon) continue;
+              const bDir = worldDirection(bPiece, b.direction);
+              if (!areConnectorDirectionsAligned(aDir, bDir)) drawExplosionMarker({ x: (aPoint.x + bPoint.x) / 2, y: (aPoint.y + bPoint.y) / 2 });
+            }
+          }
+        }
+      }
+    }
+
+    function buildDisplayName(type) {
+      return type.presetCode || (type.isStraight ? 'Straight' : type.radiusMode);
+    }
+
+    function sortedTypes() {
+      return [...state.pieceTypes.values()].sort((a, b) => {
+        const ap = a.presetCode || '', bp = b.presetCode || '';
+        if (ap !== bp) return ap.localeCompare(bp, undefined, { numeric: true });
+        if (a.isStraight !== b.isStraight) return a.isStraight ? -1 : 1;
+        return a.isStraight ? a.centreLength - b.centreLength : (a.radiusValue - b.radiusValue) || (a.angleDeg - b.angleDeg);
+      });
+    }
+
+    function renderLegend() {
+      if (!dom.legend) return;
+      const types = sortedTypes();
+      if (!types.length) {
+        dom.legend.innerHTML = '<div class="empty">No pieces yet.</div>';
+        return;
+      }
+      let html = '';
+      for (const type of types) {
+        const meta = type.isStraight
+          ? `L ${fmt(type.centreLength)} · ${type.pieces.length} piece${type.pieces.length === 1 ? '' : 's'}`
+          : `L ${fmt(type.centreLength)} · R ${fmt(type.radiusValue)} · ${type.pieces.length} piece${type.pieces.length === 1 ? '' : 's'}`;
+        html += `<div class="spec-card"><div class="spec-header"><div class="spec-title"><div class="spec-name">${buildDisplayName(type)} · ${connectorCode(type.startConnector, type.endConnector)}</div><div class="spec-meta">${meta}</div></div><div class="spec-actions"><button class="mini-btn" data-action="add-type" data-type-key="${type.key}">Add another</button><button class="icon-btn${type.expanded ? ' expanded' : ''}" data-action="toggle-type" data-type-key="${type.key}" title="${type.expanded ? 'Collapse list' : 'Expand list'}"><span class="arrow">▾</span></button></div></div><div class="piece-list${type.expanded ? ' expanded' : ''}">`;
+        for (const piece of type.pieces) {
+          const label = `${piece.label} · rot ${fmt(piece.rotation)}°`;
+          html += `<div class="piece-row${piece.id === state.activePieceId ? ' active' : ''}" data-action="select-piece" data-piece-id="${piece.id}"><input class="piece-toggle" type="checkbox" data-action="toggle-visible" data-piece-id="${piece.id}" ${piece.visible ? 'checked' : ''}><div class="piece-label" title="${label}">${label}</div><button class="delete-btn" data-action="delete-piece" data-piece-id="${piece.id}" aria-label="Delete ${piece.label}" title="Delete piece">×</button></div>`;
+        }
+        html += '</div></div>';
+      }
+      dom.legend.innerHTML = html;
+    }
+
+    function syncPresetActiveState() {
+      for (const button of dom.presetButtons.querySelectorAll('.preset-card')) {
+        button.classList.toggle('active', button.dataset.code === state.activePresetCode);
+      }
+    }
+
+    function getThumbFrame() {
+      if (state.thumbFrame) return state.thumbFrame;
+      let maxWidth = 0, maxHeight = 0;
+      for (const preset of PRESETS) {
+        const spec = presetToSpec(preset);
+        const geom = getGeometryBySpec({ ...spec, key: specKey(spec) });
+        maxWidth = Math.max(maxWidth, geom.thumbBounds.maxX - geom.thumbBounds.minX);
+        maxHeight = Math.max(maxHeight, geom.thumbBounds.maxY - geom.thumbBounds.minY);
+      }
+      state.thumbFrame = { pad: 8, viewWidth: maxWidth + 16, viewHeight: maxHeight + 16 };
+      return state.thumbFrame;
+    }
+
+    function getThumbSvgMarkup(preset) {
+      if (state.thumbCache.has(preset.code)) return state.thumbCache.get(preset.code);
+      const spec = presetToSpec(preset);
+      const type = { ...spec, key: specKey(spec) };
+      const geom = getGeometryBySpec(type);
+      const frame = getThumbFrame();
+      const bounds = geom.thumbBounds;
+      const tx = frame.pad + (frame.viewWidth - frame.pad * 2 - (bounds.maxX - bounds.minX)) / 2 - bounds.minX;
+      const ty = frame.pad + (frame.viewHeight - frame.pad * 2 - (bounds.maxY - bounds.minY)) / 2 - bounds.minY;
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" class="preset-thumb" viewBox="0 0 ${frame.viewWidth} ${frame.viewHeight}" preserveAspectRatio="xMidYMid meet" aria-hidden="true" focusable="false" style="--piece-fill:#dac09b;--rail:#4b2a17;--edge:#111111;--centre:#f4b35e;"><g transform="translate(${tx.toFixed(3)} ${ty.toFixed(3)})">${buildPieceMarkup(type, `thumb-${preset.code}`, false)}</g></svg>`;
+      state.thumbCache.set(preset.code, svg);
+      return svg;
+    }
+
+    function nextPlacementPosition(type) {
+      const totalPieces = state.pieces.size;
+      const perTypeIndex = type.pieces.length;
+      const col = totalPieces % 6;
+      const row = Math.floor(totalPieces / 6) % 4;
+      return {
+        x: CONFIG.newPieceOrigin.x + col * 34 + perTypeIndex * 6,
+        y: CONFIG.newPieceOrigin.y + row * 28 + perTypeIndex * 5
+      };
+    }
+
+    function placePresetPiece(presetCode) {
+      const preset = PRESETS.find(item => item.code === presetCode);
+      if (!preset) return null;
+      const type = ensureType(presetToSpec(preset));
+      const pos = nextPlacementPosition(type);
+      state.activePresetCode = preset.code;
+      syncPresetActiveState();
+      return createPiece(type, pos);
+    }
+
+    function buildPresetButtons() {
+      const frag = document.createDocumentFragment();
+      for (const preset of PRESETS) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'preset-card';
+        btn.dataset.action = 'place-preset';
+        btn.dataset.code = preset.code;
+        btn.setAttribute('aria-label', `Place ${preset.code}: ${preset.notes}`);
+        btn.title = `Place ${preset.code}`;
+        btn.innerHTML = `${getThumbSvgMarkup(preset)}<div class="preset-code">${preset.code}</div><div class="preset-meta">${preset.notes}</div>`;
+        frag.appendChild(btn);
+      }
+      dom.presetButtons.replaceChildren(frag);
+      syncPresetActiveState();
+    }
+
+    function setPartsCollapsed(collapsed) {
+      if (!dom.app || !dom.sidebarToggle) return;
+      dom.app.classList.toggle('parts-collapsed', collapsed);
+      dom.sidebarToggle.setAttribute('aria-expanded', String(!collapsed));
+      dom.sidebarToggle.setAttribute('aria-label', collapsed ? 'Expand Parts List' : 'Collapse Parts List');
+      dom.sidebarToggle.title = collapsed ? 'Expand Parts List' : 'Collapse Parts List';
+    }
+
+    function clearCanvas() {
+      if (state.pendingClick) {
+        clearTimeout(state.pendingClick.timerId);
+        state.pendingClick = null;
+      }
+      state.drag = null;
+      state.activePieceId = null;
+      state.pieces.clear();
+      state.pieceTypes.clear();
+      dom.pieceLayer.textContent = '';
+      dom.trackOverlayLayer.textContent = '';
+      clearWarnings();
+      state.view.panX = 0;
+      state.view.panY = 0;
+      state.view.zoom = 1;
+      renderViewTransform();
+      setTrashActive(false);
+      renderLegend();
+    }
+
+    function handleLegendClick(event) {
+      const button = event.target.closest('[data-action]');
+      if (!button) return;
+      const action = button.dataset.action;
+      if (action === 'add-type') {
+        const type = state.pieceTypes.get(button.dataset.typeKey);
+        if (type) createPiece(type);
+        return;
+      }
+      if (action === 'toggle-type') {
+        const type = state.pieceTypes.get(button.dataset.typeKey);
+        if (type) {
+          type.expanded = !type.expanded;
+          renderLegend();
+        }
+        return;
+      }
+      const piece = state.pieces.get(Number(button.dataset.pieceId));
+      if (!piece) return;
+      if (action === 'select-piece') {
+        selectPiece(piece);
+      } else if (action === 'delete-piece') {
+        event.stopPropagation();
+        deletePiece(piece.id);
+      } else if (action === 'toggle-visible') {
+        piece.visible = button.checked;
+        updatePieceTransform(piece);
+      }
+    }
+
+    function handlePresetButtonsClick(event) {
+      const button = event.target.closest('[data-action="place-preset"]');
+      if (!button || !dom.presetButtons.contains(button)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      placePresetPiece(button.dataset.code);
+    }
+
+    function setTrashActive(active) {
+      const next = !!active;
+      if (state.dragOverTrash === next) return;
+      state.dragOverTrash = next;
+      renderTrashDrop();
+    }
+
+    function endDrag() {
+      if (state.panDrag) {
+        state.panDrag = null;
+        dom.workspace?.classList.remove('panning');
+      }
+      if (!state.drag) return;
+      const drag = state.drag;
+      const piece = state.pieces.get(drag.pieceId);
+      if (piece) {
+        piece.el.classList.remove('dragging');
+        if (piece.overlayEl) piece.overlayEl.classList.remove('dragging');
+        if (drag.moved) {
+          const dropPoint = (drag.dropClientX != null && drag.dropClientY != null) ? svgUiPoint(drag.dropClientX, drag.dropClientY) : null;
+          if (dropPoint && isSvgPointOverTrash(dropPoint)) {
+            deletePiece(piece.id);
+          } else {
+            snapPiece(piece);
+          }
+        } else {
+          const now = performance.now();
+          const isDouble = state.pendingClick && state.pendingClick.pieceId === piece.id && (now - state.pendingClick.time) <= 320;
+          if (isDouble) {
+            clearTimeout(state.pendingClick.timerId);
+            state.pendingClick = null;
+            flipPieceAngle(piece);
+          } else {
+            const timerId = window.setTimeout(() => {
+              const current = state.pieces.get(piece.id);
+              if (current && state.pendingClick && state.pendingClick.pieceId === piece.id) {
+                rotatePiece(current);
+                state.pendingClick = null;
+              }
+            }, 320);
+            state.pendingClick = { pieceId: piece.id, time: now, timerId };
+          }
+        }
+      }
+      setTrashActive(false);
+      state.drag = null;
+      renderLegend();
+    }
+
+    function getPieceFromEventTarget(target) {
+      const pieceNode = target && target.closest ? target.closest('.piece, .piece-overlay') : null;
+      if (!pieceNode) return null;
+      return state.pieces.get(Number(pieceNode.dataset.pieceId)) || null;
+    }
+
+    dom.svg.addEventListener('pointerdown', event => {
+      if (event.button !== 0) return;
+      const piece = getPieceFromEventTarget(event.target);
+      event.preventDefault();
+      if (piece) {
+        selectPiece(piece);
+        const p = worldPointFromClient(event.clientX, event.clientY);
+        state.drag = {
+          pieceId: piece.id,
+          pointerId: event.pointerId,
+          dx: p.x - piece.x,
+          dy: p.y - piece.y,
+          startX: p.x,
+          startY: p.y,
+          moved: false,
+          dropClientX: event.clientX,
+          dropClientY: event.clientY
+        };
+        setTrashActive(false);
+        piece.el.classList.add('dragging');
+        if (piece.overlayEl) piece.overlayEl.classList.add('dragging');
+        (piece.overlayEl || piece.el).setPointerCapture?.(event.pointerId);
+        return;
+      }
+      const p = svgUiPoint(event.clientX, event.clientY);
+      state.panDrag = {
+        pointerId: event.pointerId,
+        startSvgX: p.x,
+        startSvgY: p.y,
+        startPanX: state.view.panX,
+        startPanY: state.view.panY
+      };
+      dom.workspace?.classList.add('panning');
+      dom.svg.setPointerCapture?.(event.pointerId);
+    });
+
+    dom.svg.addEventListener('contextmenu', event => {
+      const piece = getPieceFromEventTarget(event.target);
+      if (!piece) return;
+      event.preventDefault();
+      if (state.drag && state.drag.pieceId === piece.id) {
+        state.drag = null;
+        setTrashActive(false);
+      }
+      if (state.pendingClick && state.pendingClick.pieceId === piece.id) {
+        clearTimeout(state.pendingClick.timerId);
+        state.pendingClick = null;
+      }
+      piece.el.classList.remove('dragging');
+      if (piece.overlayEl) piece.overlayEl.classList.remove('dragging');
+      rotatePiece(piece, -1);
+    });
+
+    dom.svg.addEventListener('pointermove', event => {
+      if (state.panDrag) {
+        const p = svgUiPoint(event.clientX, event.clientY);
+        state.view.panX = state.panDrag.startPanX + (p.x - state.panDrag.startSvgX);
+        state.view.panY = state.panDrag.startPanY + (p.y - state.panDrag.startSvgY);
+        renderViewTransform();
+        return;
+      }
+      if (!state.drag) return;
+      const piece = state.pieces.get(state.drag.pieceId);
+      if (!piece) return;
+      const p = worldPointFromClient(event.clientX, event.clientY);
+      if (Math.hypot(p.x - state.drag.startX, p.y - state.drag.startY) > 4) state.drag.moved = true;
+      state.drag.dropClientX = event.clientX;
+      state.drag.dropClientY = event.clientY;
+      setTrashActive(state.drag.moved && isSvgPointOverTrash(svgUiPoint(event.clientX, event.clientY)));
+      piece.x = p.x - state.drag.dx;
+      piece.y = p.y - state.drag.dy;
+      updatePieceTransform(piece);
+    });
+
+    dom.svg.addEventListener('wheel', event => {
+      event.preventDefault();
+      const cursor = svgUiPoint(event.clientX, event.clientY);
+      const oldZoom = state.view.zoom;
+      const factor = Math.exp(-event.deltaY * 0.0015);
+      const newZoom = clamp(oldZoom * factor, state.view.minZoom, state.view.maxZoom);
+      if (Math.abs(newZoom - oldZoom) < 1e-6) return;
+      const worldX = (cursor.x - state.view.panX) / oldZoom;
+      const worldY = (cursor.y - state.view.panY) / oldZoom;
+      state.view.zoom = newZoom;
+      state.view.panX = cursor.x - worldX * newZoom;
+      state.view.panY = cursor.y - worldY * newZoom;
+      renderViewTransform();
+    }, { passive: false });
+
+    dom.svg.addEventListener('pointerup', endDrag);
+    dom.svg.addEventListener('pointercancel', endDrag);
+    window.addEventListener('pointerup', endDrag);
+    if (dom.legend) dom.legend.addEventListener('click', handleLegendClick);
+    dom.presetButtons.addEventListener('click', handlePresetButtonsClick);
+    if (dom.sidebarToggle) dom.sidebarToggle.addEventListener('click', () => setPartsCollapsed(!dom.app.classList.contains('parts-collapsed')));
+
+    renderViewTransform();
+    renderTrashDrop();
+    buildPresetButtons();
+    renderLegend();
+    placePresetPiece('E1');
+
+    window.TrackPieceDesignerEfficient = { clearCanvas, state };
+  })();
+  </script>
+</body>
+</html>

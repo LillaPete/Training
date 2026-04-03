@@ -19,15 +19,23 @@
     .preset-strip{position:absolute;left:14px;right:14px;top:14px;z-index:20;background:rgba(255,250,242,.94);backdrop-filter:blur(10px);border:1px solid rgba(0,0,0,.08);border-radius:16px;box-shadow:var(--shadow);padding:8px;max-height:208px;overflow-y:auto;overflow-x:hidden;scrollbar-gutter:stable}
     .preset-strip:focus-within{box-shadow:0 0 0 2px rgba(165,76,0,.12),var(--shadow)}
     .preset-buttons{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));grid-auto-rows:94px;gap:6px;width:100%;align-content:start;padding-right:4px}
-    .preset-card{width:100%;min-width:0;height:94px;background:#fffaf2;border:1px solid rgba(0,0,0,.09);border-radius:12px;padding:6px 5px;display:grid;grid-template-rows:32px auto 1fr;gap:3px;box-shadow:0 4px 12px rgba(46,31,18,.08);align-content:start;cursor:pointer}
-    .trash-drop{position:absolute;left:14px;bottom:14px;z-index:18;width:94px;height:94px;display:grid;grid-template-rows:44px auto;gap:4px;align-content:start;justify-items:center;padding:8px 6px;background:rgba(255,250,242,.94);backdrop-filter:blur(10px);border:1px solid rgba(0,0,0,.09);border-radius:12px;box-shadow:0 4px 12px rgba(46,31,18,.08);pointer-events:none;transition:transform .12s ease,border-color .12s ease,box-shadow .12s ease,background .12s ease,opacity .12s ease;opacity:.9}
-    .trash-drop svg{width:38px;height:38px;display:block}
-    .trash-drop .trash-meta{font-size:10px;font-weight:700;line-height:1.05;color:var(--muted);text-align:center}
+    .preset-card{width:100%;min-width:0;height:94px;background:#fffaf2;border:1px solid rgba(0,0,0,.09);border-radius:12px;padding:6px 5px;display:grid;grid-template-rows:32px 1fr;gap:6px;box-shadow:0 4px 12px rgba(46,31,18,.08);align-content:start;cursor:pointer}
+    .preset-card.drag-origin{opacity:.55}
+    .preset-drag-ghost{position:fixed;left:0;top:0;z-index:60;width:160px;max-width:22vw;pointer-events:none;transform:translate(-9999px,-9999px) rotate(2deg);opacity:.96;box-shadow:0 16px 30px rgba(46,31,18,.18)}
+    .preset-drag-ghost.can-drop{box-shadow:0 0 0 2px rgba(165,76,0,.18),0 16px 30px rgba(46,31,18,.18)}
+    .trash-drop{position:absolute;left:14px;bottom:14px;z-index:18;width:94px;height:94px;display:flex;align-items:center;justify-content:center;padding:0;background:rgba(255,250,242,.94);backdrop-filter:blur(10px);border:1px solid rgba(0,0,0,.09);border-radius:12px;box-shadow:0 4px 12px rgba(46,31,18,.08);pointer-events:none;transition:transform .12s ease,border-color .12s ease,box-shadow .12s ease,background .12s ease,opacity .12s ease;opacity:.9}
+    .trash-drop svg{width:38px;height:38px;display:block;overflow:visible}
     .trash-drop.active{background:rgba(180,35,24,.12);border-color:rgba(180,35,24,.45);box-shadow:0 0 0 2px rgba(180,35,24,.14),0 4px 12px rgba(46,31,18,.08);transform:scale(1.03);opacity:1}
     .preset-card.active{border-color:rgba(165,76,0,.45);box-shadow:0 0 0 2px rgba(165,76,0,.12),0 4px 12px rgba(46,31,18,.08)}
-    .preset-thumb{width:100%;height:30px;display:block;border-radius:10px;background:linear-gradient(180deg,#fbf5eb 0%,#f2e8d7 100%);border:1px solid rgba(0,0,0,.05)}
-    .preset-code{font-size:11px;font-weight:800;line-height:1}
-    .preset-meta{font-size:7px;color:var(--muted);line-height:1.05;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    .preset-thumb-wrap{position:relative;width:100%;height:30px;border-radius:10px;background:linear-gradient(180deg,#fbf5eb 0%,#f2e8d7 100%);border:1px solid rgba(0,0,0,.05);overflow:hidden}
+    .preset-thumb{position:absolute;inset:0;width:100%;height:100%;display:block;border-radius:10px;background:none;border:none}
+    .preset-thumb-marker{position:absolute;top:50%;transform:translateY(-50%);z-index:2;font-size:12px;font-weight:900;line-height:1;color:#111;pointer-events:none;text-shadow:0 0 2px rgba(255,250,242,.98),0 0 4px rgba(255,250,242,.98)}
+    .preset-thumb-marker.start{left:6px}
+    .preset-thumb-marker.end{right:6px}
+    .preset-code{display:none}
+    .preset-meta{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;line-height:1.02;color:var(--text);letter-spacing:.01em;gap:2px}
+    .preset-kind{font-size:15px;font-weight:700;color:var(--text);letter-spacing:.02em}
+    .preset-name{font-size:11px;font-weight:400;color:var(--muted);letter-spacing:.02em}
 
     .empty{padding:14px;border:1px dashed rgba(0,0,0,.16);border-radius:14px;color:var(--muted);background:rgba(255,255,255,.55);font-size:14px;line-height:1.45}
     .spec-card{border:1px solid rgba(0,0,0,.09);background:var(--panel);border-radius:16px;box-shadow:0 8px 18px rgba(46,31,18,.08);margin-bottom:12px;overflow:hidden}
@@ -51,7 +59,11 @@
     .delete-btn:hover{background:rgba(180,35,24,.18)}
     button{font:inherit}
     svg{width:100%;height:100%;display:block;touch-action:none;user-select:none;cursor:grab}
-    .piece .hit,.piece-overlay .hit{cursor:grab}
+    #panSurface{cursor:grab}
+    .workspace.panning #panSurface{cursor:grabbing}
+    .piece,.piece-overlay{pointer-events:none}
+    .piece *,.piece-overlay *{pointer-events:none}
+    .piece .hit,.piece-overlay .hit{pointer-events:all;cursor:grab}
     .piece.is-active,.piece-overlay.is-active{filter:drop-shadow(0 0 .9px rgba(165,76,0,.9))}
     .piece.dragging .hit,.piece-overlay.dragging .hit{cursor:grabbing}
     @media (max-width:980px){
@@ -67,24 +79,17 @@
 <body>
   <div class="app" id="app">
     <section class="workspace">
-      <svg id="canvas" viewBox="0 0 1200 800" aria-label="Track design canvas">
+      <svg id="canvas" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" aria-label="Track design canvas">
         <defs>
-          <pattern id="smallGrid" width="10" height="10" patternUnits="userSpaceOnUse">
-            <path d="M 10 0 L 0 0 0 10" fill="none" stroke="#e7ddcf" stroke-width="0.8" />
-          </pattern>
-          <pattern id="bigGrid" width="50" height="50" patternUnits="userSpaceOnUse">
-            <rect width="50" height="50" fill="url(#smallGrid)" />
-            <path d="M 50 0 L 0 0 0 50" fill="none" stroke="#dacbb7" stroke-width="1.2" />
-          </pattern>
         </defs>
-        <g id="uiUnderlayLayer"></g>
+        <g id="uiUnderlayLayer"><rect id="panSurface" x="0" y="0" width="1200" height="800" fill="rgba(0,0,0,0.001)" pointer-events="all"></rect></g>
         <g id="worldLayer">
-          <rect x="0" y="0" width="1200" height="800" fill="url(#bigGrid)" />
           <g id="pieceLayer"></g>
           <g id="trackOverlayLayer"></g>
           <g id="fxLayer"></g>
         </g>
       </svg>
+      <div id="trashOverlay" class="trash-drop" aria-hidden="true"></div>
       <div class="preset-strip">
         <div id="presetButtons" class="preset-buttons" aria-label="Parts buttons"></div>
       </div>
@@ -96,21 +101,24 @@
     'use strict';
 
     const PRESETS = [
-      { code:'A',  centreLength:144.0, radiusValue:null, angleDeg:0, startConnector:'male',   endConnector:'female', notes:'Standard medium straight' },
-      { code:'B',  centreLength:144.0, radiusValue:null, angleDeg:0, startConnector:'male',   endConnector:'male',   notes:'Same length as A' },
-      { code:'C',  centreLength:144.0, radiusValue:null, angleDeg:0, startConnector:'female', endConnector:'female', notes:'Same length as A' },
-      { code:'A1', centreLength:108.0, radiusValue:null, angleDeg:0, startConnector:'male',   endConnector:'female', notes:'Standard short straight' },
-      { code:'B1', centreLength:108.0, radiusValue:null, angleDeg:0, startConnector:'male',   endConnector:'male',   notes:'Same length as A1' },
-      { code:'C1', centreLength:108.0, radiusValue:null, angleDeg:0, startConnector:'female', endConnector:'female', notes:'Same length as A1' },
-      { code:'A2', centreLength:54.0,  radiusValue:null, angleDeg:0, startConnector:'male',   endConnector:'female', notes:'Mini straight' },
-      { code:'B2', centreLength:54.0,  radiusValue:null, angleDeg:0, startConnector:'male',   endConnector:'male',   notes:'Same length as A2' },
-      { code:'C2', centreLength:54.0,  radiusValue:null, angleDeg:0, startConnector:'female', endConnector:'female', notes:'Same length as A2' },
-      { code:'A3', centreLength:72.0,  radiusValue:null, angleDeg:0, startConnector:'male',   endConnector:'female', notes:'Middle straight' },
-      { code:'D',  centreLength:216.0, radiusValue:null, angleDeg:0, startConnector:'male',   endConnector:'female', notes:'Long straight' },
-      { code:'E',  centreLength:158.7, radiusValue:202,  angleDeg:(158.7/202) * 180 / Math.PI, startConnector:'male', endConnector:'female', notes:'Large 45° curve' },
-      { code:'E1', centreLength:86.4,  radiusValue:110,  angleDeg:(86.4/110) * 180 / Math.PI,  startConnector:'male', endConnector:'female', notes:'Short 45° curve' },
-      { code:'X',  compositeKind:'crossA1', centreLength:108.0, radiusValue:null, angleDeg:0, startConnector:'male', endConnector:'female', notes:'Cross piece: two A1-like arms at 90°' }
+      { code:'A2', centreLength:54.0,  radiusValue:null, angleDeg:0, startConnector:'male',   endConnector:'female', displayName:'X SHORT',     notes:'X SHORT' },
+      { code:'B2', centreLength:54.0,  radiusValue:null, angleDeg:0, startConnector:'male',   endConnector:'male',   displayName:'X SHORT',     notes:'X SHORT' },
+      { code:'C2', centreLength:54.0,  radiusValue:null, angleDeg:0, startConnector:'female', endConnector:'female', displayName:'X SHORT',     notes:'X SHORT' },
+      { code:'A1', centreLength:108.0, radiusValue:null, angleDeg:0, startConnector:'male',   endConnector:'female', displayName:'SHORT',       notes:'SHORT' },
+      { code:'B1', centreLength:108.0, radiusValue:null, angleDeg:0, startConnector:'male',   endConnector:'male',   displayName:'SHORT',       notes:'SHORT' },
+      { code:'C1', centreLength:108.0, radiusValue:null, angleDeg:0, startConnector:'female', endConnector:'female', displayName:'SHORT',       notes:'SHORT' },
+      { code:'A',  centreLength:144.0, radiusValue:null, angleDeg:0, startConnector:'male',   endConnector:'female', displayName:'MEDIUM',      notes:'MEDIUM' },
+      { code:'B',  centreLength:144.0, radiusValue:null, angleDeg:0, startConnector:'male',   endConnector:'male',   displayName:'MEDIUM',      notes:'MEDIUM' },
+      { code:'C',  centreLength:144.0, radiusValue:null, angleDeg:0, startConnector:'female', endConnector:'female', displayName:'MEDIUM',      notes:'MEDIUM' },
+      { code:'D',  centreLength:216.0, radiusValue:null, angleDeg:0, startConnector:'male',   endConnector:'female', displayName:'LONG',        notes:'LONG' },
+      { code:'E1', centreLength:86.4,  radiusValue:110,  angleDeg:(86.4/110) * 180 / Math.PI,  startConnector:'male', endConnector:'female', displayName:'SMALL', notes:'SMALL' },
+      { code:'E',  centreLength:158.7, radiusValue:202,  angleDeg:(158.7/202) * 180 / Math.PI, startConnector:'male', endConnector:'female', displayName:'LARGE', notes:'LARGE' },
+      { code:'X',   compositeKind:'crossA1',  centreLength:108.0, radiusValue:null, angleDeg:0, startConnector:'male', endConnector:'female', displayName:'CROSS',  notes:'CROSS' },
+      { code:'T31', compositeKind:'triple31', centreLength:144.0, radiusValue:null, angleDeg:0, startConnector:'male', endConnector:'female', startMarkerCount:3, endMarkerCount:1, displayName:'3-to-1', notes:'3-to-1' },
+      { code:'T13', compositeKind:'triple13', centreLength:144.0, radiusValue:null, angleDeg:0, startConnector:'male', endConnector:'female', startMarkerCount:1, endMarkerCount:3, displayName:'1-to-3', notes:'1-to-3' }
     ];
+
+    const PRESET_INDEX = new Map(PRESETS.map((preset, index) => [preset.code, index]));
 
     const CONFIG = {
       railOffset: 13,
@@ -128,13 +136,20 @@
       snapDistance: 22,
       connectionEpsilon: 0.75,
       alignmentToleranceDeg: 2,
-      dualSnapMaxResidual: 8
+      dualSnapMaxResidual: 8,
+      seriesRelaxDistance: 12,
+      seriesRelaxIterations: 18,
+      seriesRelaxStep: 0.6,
+      seriesRelaxMaxPerPass: 3
     };
 
     const dom = {
       app: document.getElementById('app'),
       svg: document.getElementById('canvas'),
+      panSurface: document.getElementById('panSurface'),
       workspace: document.querySelector('.workspace'),
+      presetStrip: document.querySelector('.preset-strip'),
+      trashOverlay: document.getElementById('trashOverlay'),
       worldLayer: document.getElementById('worldLayer'),
       uiUnderlayLayer: document.getElementById('uiUnderlayLayer'),
       pieceLayer: document.getElementById('pieceLayer'),
@@ -159,6 +174,8 @@
       warningsQueued: false,
       dragOverTrash: false,
       panDrag: null,
+      libraryDrag: null,
+      suppressPresetClickUntil: 0,
       view: { panX: 0, panY: 0, zoom: 1, minZoom: 0.35, maxZoom: 4 },
       trashBounds: { x: 14, y: 692, width: 94, height: 94 }
     };
@@ -169,8 +186,57 @@
     const degToRad = deg => deg * Math.PI / 180;
     const pieceValues = () => [...state.pieces.values()];
 
+    function connectorIcon(connectorKind) {
+      return connectorKind === 'female' ? '○' : '●';
+    }
+
     function connectorCode(startConnector, endConnector) {
-      return `${startConnector[0].toUpperCase()}-${endConnector[0].toUpperCase()}`;
+      return `${connectorIcon(startConnector)} ${connectorIcon(endConnector)}`;
+    }
+
+    function presetForCode(code) {
+      return PRESETS.find(preset => preset.code === code) || null;
+    }
+
+    function presetDisplayName(presetOrType) {
+      const preset = presetOrType?.code ? presetForCode(presetOrType.code) : presetForCode(presetOrType?.presetCode);
+      return preset?.displayName || presetOrType?.displayName || presetOrType?.notes || presetOrType?.presetCode || '';
+    }
+
+    function presetFamilyLabel(presetOrType) {
+      const code = presetOrType?.code || presetOrType?.presetCode || '';
+      if (code === 'X') return 'EXTRA';
+      if (presetOrType?.compositeKind) return 'EXTRA';
+      if (presetOrType?.radiusValue != null) return 'CURVE';
+      return 'STRAIGHT';
+    }
+
+    function decoratedPresetCode(presetOrType) {
+      const code = presetOrType?.code || presetOrType?.presetCode || '';
+      if (!code) return '';
+      if (code === 'X') return code;
+      return `${connectorIcon(presetOrType.startConnector)} ${code} ${connectorIcon(presetOrType.endConnector)}`;
+    }
+
+    function presetButtonLabel(preset) {
+      const decoratedCode = decoratedPresetCode(preset);
+      const displayName = presetDisplayName(preset);
+      return decoratedCode ? `${decoratedCode} - ${displayName}` : `${preset.code} - ${displayName}`;
+    }
+
+    function presetThumbMarkersMarkup(preset) {
+      if (!preset || preset.code === 'X') return '';
+      const markerPositions = count => count <= 1 ? [50] : [24, 50, 76];
+      const sideMarkup = (side, connectorKind, count) => markerPositions(count).map(top =>
+        `<span class="preset-thumb-marker ${side}" style="top:${top}%" aria-hidden="true">${connectorIcon(connectorKind)}</span>`
+      ).join('');
+      const startCount = Math.max(1, Number(preset.startMarkerCount || 1));
+      const endCount = Math.max(1, Number(preset.endMarkerCount || 1));
+      return sideMarkup('start', preset.startConnector, startCount) + sideMarkup('end', preset.endConnector, endCount);
+    }
+
+    function presetThumbWrapMarkup(preset) {
+      return `<div class="preset-thumb-wrap">${presetThumbMarkersMarkup(preset)}${getThumbSvgMarkup(preset)}</div>`;
     }
 
     function radiusModeForValue(radiusValue) {
@@ -210,12 +276,11 @@
     function getGeometryBySpec(spec) {
       const key = spec.key || specKey(spec);
       if (!state.geomCache.has(key)) {
-        state.geomCache.set(
-          key,
-          spec.compositeKind === 'crossA1'
-            ? geometryForCrossA1Spec(spec)
-            : geometryForSpec(spec.centreLength, spec.angleDeg, spec.radiusValue, spec.startConnector, spec.endConnector)
-        );
+        let geometry;
+        if (spec.compositeKind === 'crossA1') geometry = geometryForCrossA1Spec(spec);
+        else if (spec.compositeKind === 'triple13' || spec.compositeKind === 'triple31') geometry = geometryForTripleBranchSpec(spec);
+        else geometry = geometryForSpec(spec.centreLength, spec.angleDeg, spec.radiusValue, spec.startConnector, spec.endConnector);
+        state.geomCache.set(key, geometry);
       }
       return state.geomCache.get(key);
     }
@@ -247,8 +312,13 @@
       return { x: point.x * c - point.y * s, y: point.x * s + point.y * c };
     }
 
+    function pieceLocalPivot(piece) {
+      return piece.rotationPivot || getTypeGeometry(piece.type).rotationPivot || { x: 0, y: 0 };
+    }
+
     function worldConnectorPoint(piece, localPoint) {
-      const rotated = rotatePoint(localPoint, piece.rotation);
+      const pivot = pieceLocalPivot(piece);
+      const rotated = rotatePoint({ x: localPoint.x - pivot.x, y: localPoint.y - pivot.y }, piece.rotation);
       return { x: piece.x + rotated.x, y: piece.y + rotated.y };
     }
 
@@ -446,6 +516,7 @@
         startGeom,
         endGeom,
         connectorPoints: [startGeom, endGeom].map(connector => ({ kind: connector.kind, local: connector.centre, direction: connector.direction, side: connector.side })),
+        rotationPivot: pointOnPath(centreLength, angleDeg, radiusValue, centreLength / 2).p,
         thumbBounds
       };
     }
@@ -506,7 +577,106 @@
         baseType,
         components,
         connectorPoints,
+        rotationPivot: { x: 0, y: 0 },
         thumbBounds: mergeBounds(boundsList)
+      };
+    }
+
+    function cubicPathD(p0, c1, c2, p1) {
+      return `M ${p0.x.toFixed(3)} ${p0.y.toFixed(3)} C ${c1.x.toFixed(3)} ${c1.y.toFixed(3)}, ${c2.x.toFixed(3)} ${c2.y.toFixed(3)}, ${p1.x.toFixed(3)} ${p1.y.toFixed(3)}`;
+    }
+
+    function straightConnectorSample(x, y, side, halfWidth=CONFIG.outerOffset) {
+      return {
+        p: { x, y },
+        t: { x: 1, y: 0 },
+        n: { x: 0, y: 1 },
+        edgeTop: { x, y: y + halfWidth },
+        edgeBottom: { x, y: y - halfWidth }
+      };
+    }
+
+    function geometryForTripleBranchSpec(spec) {
+      const length = spec.centreLength || 144;
+      const offsets = [-46, 0, 46];
+      const outerHalf = CONFIG.outerOffset;
+      const railHalf = CONFIG.railOffset;
+      const isOneToThree = spec.compositeKind === 'triple13';
+
+      const bodyPoints = isOneToThree
+        ? [
+            { x: 0, y: -outerHalf },
+            { x: length * 0.28, y: -outerHalf },
+            { x: length * 0.70, y: offsets[0] - outerHalf },
+            { x: length, y: offsets[0] - outerHalf },
+            { x: length, y: offsets[2] + outerHalf },
+            { x: length * 0.70, y: offsets[2] + outerHalf },
+            { x: length * 0.28, y: outerHalf },
+            { x: 0, y: outerHalf }
+          ]
+        : [
+            { x: 0, y: offsets[0] - outerHalf },
+            { x: length * 0.30, y: offsets[0] - outerHalf },
+            { x: length * 0.72, y: -outerHalf },
+            { x: length, y: -outerHalf },
+            { x: length, y: outerHalf },
+            { x: length * 0.72, y: outerHalf },
+            { x: length * 0.30, y: offsets[2] + outerHalf },
+            { x: 0, y: offsets[2] + outerHalf }
+          ];
+
+      const centrePaths = [];
+      const railPaths = [];
+      const connectorsGeom = [];
+
+      const addBranchPaths = (startY, endY) => {
+        centrePaths.push(cubicPathD(
+          { x: 0, y: startY },
+          { x: length * 0.30, y: startY },
+          { x: length * 0.70, y: endY },
+          { x: length, y: endY }
+        ));
+        for (const delta of [-railHalf, railHalf]) {
+          railPaths.push(cubicPathD(
+            { x: 0, y: startY + delta },
+            { x: length * 0.30, y: startY + delta },
+            { x: length * 0.70, y: endY + delta },
+            { x: length, y: endY + delta }
+          ));
+        }
+      };
+
+      if (isOneToThree) {
+        for (const offset of offsets) addBranchPaths(0, offset);
+        connectorsGeom.push(connectorGeometryAtEnd(straightConnectorSample(0, 0, 'start', outerHalf), 'start', spec.startConnector));
+        for (const offset of offsets) connectorsGeom.push(connectorGeometryAtEnd(straightConnectorSample(length, offset, 'end', outerHalf), 'end', spec.endConnector));
+      } else {
+        for (const offset of offsets) addBranchPaths(offset, 0);
+        for (const offset of offsets) connectorsGeom.push(connectorGeometryAtEnd(straightConnectorSample(0, offset, 'start', outerHalf), 'start', spec.startConnector));
+        connectorsGeom.push(connectorGeometryAtEnd(straightConnectorSample(length, 0, 'end', outerHalf), 'end', spec.endConnector));
+      }
+
+      const thumbBounds = boundsFromPoints(bodyPoints);
+      for (const connector of connectorsGeom) {
+        for (const p of connector.boundsPoints) {
+          thumbBounds.minX = Math.min(thumbBounds.minX, p.x);
+          thumbBounds.minY = Math.min(thumbBounds.minY, p.y);
+          thumbBounds.maxX = Math.max(thumbBounds.maxX, p.x);
+          thumbBounds.maxY = Math.max(thumbBounds.maxY, p.y);
+        }
+        if (connector.kind === 'male' && connector.headRadius > 0) expandBoundsWithCircle(thumbBounds, connector.centre, connector.headRadius);
+      }
+
+      return {
+        compositeKind: spec.compositeKind,
+        bodyPolygonD: polygonD(bodyPoints),
+        hitPath: polygonD(bodyPoints),
+        railPaths,
+        centrePaths,
+        connectorsGeom,
+        connectorPoints: connectorsGeom.map(connector => ({ kind: connector.kind, local: connector.centre, direction: connector.direction, side: connector.side })),
+        rotationPivot: { x: length / 2, y: 0 },
+        thumbBounds
       };
     }
 
@@ -539,29 +709,99 @@
       };
     }
 
-    function buildTrackOverlayMarkup(type, includeHits=true) {
+
+    function femaleTrackMaskMarkup(maskId, connectors) {
+      const cutoutPaths = connectors.flatMap(connector => connector.kind === 'female' ? connector.maskPaths : []);
+      if (!cutoutPaths.length) return '';
+      return `<defs><mask id="${maskId}" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse"><rect x="-10000" y="-10000" width="20000" height="20000" fill="white"></rect>${cutoutPaths.map(d => `<path d="${d}" fill="black"></path>`).join('')}</mask></defs>`;
+    }
+
+    function buildTrackOverlayMarkup(type, includeHits=true, idBase='track') {
       const geom = getTypeGeometry(type);
       if (geom.compositeKind === 'crossA1') {
         return geom.components.map(component =>
-          `<g transform="translate(${component.tx.toFixed(3)} ${component.ty.toFixed(3)}) rotate(${component.rotation.toFixed(3)})">${buildTrackOverlayMarkup(geom.baseType, includeHits)}</g>`
+          `<g transform="translate(${component.tx.toFixed(3)} ${component.ty.toFixed(3)}) rotate(${component.rotation.toFixed(3)})">${buildTrackOverlayMarkup(geom.baseType, includeHits, `${idBase}-${component.idSuffix}`)}</g>`
         ).join('');
       }
+      if (geom.compositeKind === 'triple13' || geom.compositeKind === 'triple31') {
+        const trackMaskId = `${idBase}-track-mask`;
+        const trackDefs = femaleTrackMaskMarkup(trackMaskId, geom.connectorsGeom);
+        const railMarkup = geom.railPaths.map(d => `<path d="${d}" fill="none" stroke="var(--rail)" stroke-width="${CONFIG.railWidth}" stroke-linecap="butt" stroke-linejoin="round"></path>`).join('');
+        const centreMarkup = geom.centrePaths.map(d => `<path d="${d}" fill="none" stroke="var(--centre)" stroke-width="${CONFIG.centreWidth}" stroke-linecap="round" stroke-linejoin="round"></path>`).join('');
+        let markup = '';
+        if (includeHits) {
+          markup += `<path d="${geom.hitPath}" class="hit" fill="rgba(0,0,0,0.001)" stroke="none"></path>` + geom.connectorsGeom.map(connector => connectorHitMarkup(connector.hitPaths)).join('');
+        }
+        if (trackDefs) markup += trackDefs + `<g mask="url(#${trackMaskId})">${railMarkup}${centreMarkup}</g>`;
+        else markup += railMarkup + centreMarkup;
+        return markup;
+      }
+      const trackMaskId = `${idBase}-track-mask`;
+      const connectors = [geom.startGeom, geom.endGeom];
+      const trackDefs = femaleTrackMaskMarkup(trackMaskId, connectors);
+      const overlayMarkup =
+        `<path d="${geom.railLeftD}" fill="none" stroke="var(--rail)" stroke-width="${CONFIG.railWidth}" stroke-linecap="butt" stroke-linejoin="round"></path>` +
+        `<path d="${geom.railRightD}" fill="none" stroke="var(--rail)" stroke-width="${CONFIG.railWidth}" stroke-linecap="butt" stroke-linejoin="round"></path>` +
+        `<path d="${geom.centreD}" fill="none" stroke="var(--centre)" stroke-width="${CONFIG.centreWidth}" stroke-linecap="round" stroke-linejoin="round"></path>`;
       let markup = '';
       if (includeHits) {
         markup += `<path d="${geom.hitPath}" class="hit" fill="rgba(0,0,0,0.001)" stroke="none"></path>` + connectorHitMarkup(geom.startGeom.hitPaths) + connectorHitMarkup(geom.endGeom.hitPaths);
       }
-      markup += `<path d="${geom.railLeftD}" fill="none" stroke="var(--rail)" stroke-width="${CONFIG.railWidth}" stroke-linecap="butt" stroke-linejoin="round"></path>` +
-        `<path d="${geom.railRightD}" fill="none" stroke="var(--rail)" stroke-width="${CONFIG.railWidth}" stroke-linecap="butt" stroke-linejoin="round"></path>` +
-        `<path d="${geom.centreD}" fill="none" stroke="var(--centre)" stroke-width="${CONFIG.centreWidth}" stroke-linecap="round" stroke-linejoin="round"></path>`;
+      if (trackDefs) markup += trackDefs + `<g mask="url(#${trackMaskId})">${overlayMarkup}</g>`;
+      else markup += overlayMarkup;
       return markup;
     }
 
-    function buildPieceMarkup(type, idBase, includeHits) {
+    function buildPieceMarkup(type, idBase, includeHits, coverageRect=null) {
       const geom = getTypeGeometry(type);
+      const isThumbnail = !includeHits && !!coverageRect;
+      const fillCoverage = coverageRect || { x: -10000, y: -10000, width: 20000, height: 20000 };
+      const coverageRectWhite = `<rect x="${fillCoverage.x.toFixed(3)}" y="${fillCoverage.y.toFixed(3)}" width="${fillCoverage.width.toFixed(3)}" height="${fillCoverage.height.toFixed(3)}" fill="white"></rect>`;
+      const coverageRectBlack = `<rect x="${fillCoverage.x.toFixed(3)}" y="${fillCoverage.y.toFixed(3)}" width="${fillCoverage.width.toFixed(3)}" height="${fillCoverage.height.toFixed(3)}" fill="black"></rect>`;
+      const coverageRectFill = `<rect x="${fillCoverage.x.toFixed(3)}" y="${fillCoverage.y.toFixed(3)}" width="${fillCoverage.width.toFixed(3)}" height="${fillCoverage.height.toFixed(3)}" fill="var(--piece-fill)" mask="url(#${idBase}-fill-mask)"></rect>`;
       if (geom.compositeKind === 'crossA1') {
         return geom.components.map(component =>
-          `<g transform="translate(${component.tx.toFixed(3)} ${component.ty.toFixed(3)}) rotate(${component.rotation.toFixed(3)})">${buildPieceMarkup(geom.baseType, `${idBase}-${component.idSuffix}`, false)}</g>`
+          `<g transform="translate(${component.tx.toFixed(3)} ${component.ty.toFixed(3)}) rotate(${component.rotation.toFixed(3)})">${buildPieceMarkup(geom.baseType, `${idBase}-${component.idSuffix}`, false, coverageRect)}</g>`
         ).join('');
+      }
+      if (geom.compositeKind === 'triple13' || geom.compositeKind === 'triple31') {
+        const maskId = `${idBase}-piece-mask`;
+        const fillMaskId = `${idBase}-fill-mask`;
+        const femaleUi = [];
+        let extraDefs = '';
+        for (const connector of geom.connectorsGeom) {
+          if (connector.kind !== 'female') continue;
+          const ids = femaleDefsMarkup(maskId, `${idBase}-${connector.side}-${femaleUi.length}`, connector);
+          extraDefs += ids.markup;
+          femaleUi.push({ connector, ids });
+        }
+        const thumbnailFillD = [
+          geom.bodyPolygonD,
+          ...geom.connectorsGeom.flatMap(connector => connector.fillPaths),
+          ...geom.connectorsGeom.flatMap(connector => connector.maskPaths)
+        ].join(' ');
+        let markup = '<defs>' +
+          `<mask id="${maskId}" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse">${coverageRectWhite}${geom.connectorsGeom.flatMap(connector => connector.maskPaths).map(d => `<path d="${d}" fill="black"></path>`).join('')}</mask>` +
+          (isThumbnail ? '' : `<mask id="${fillMaskId}" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse">${coverageRectBlack}<path d="${geom.bodyPolygonD}" fill="white" stroke="white" stroke-width="${CONFIG.outerWidth}" stroke-linejoin="round" stroke-linecap="round"></path>${geom.connectorsGeom.flatMap(connector => connector.fillPaths).map(d => `<path d="${d}" fill="white" stroke="white" stroke-width="${CONFIG.outerWidth}" stroke-linejoin="round" stroke-linecap="round"></path>`).join('')}${geom.connectorsGeom.flatMap(connector => connector.maskPaths).map(d => `<path d="${d}" fill="black" stroke="black" stroke-width="${CONFIG.outerWidth}" stroke-linejoin="round" stroke-linecap="round"></path>`).join('')}</mask>`) +
+          extraDefs +
+          '</defs>' +
+          (isThumbnail
+            ? `<path d="${thumbnailFillD}" fill="var(--piece-fill)" fill-rule="evenodd" stroke="none"></path>`
+            : `${coverageRectFill}`) +
+          `<path d="${geom.bodyPolygonD}" fill="none" stroke="var(--edge)" stroke-width="${CONFIG.outerWidth}" stroke-linecap="round" stroke-linejoin="round"></path>` +
+          '<g>' + geom.connectorsGeom.map(connector => connectorOutlineMarkup(connector)).join('');
+        for (const connector of geom.connectorsGeom) {
+          if (connector.capD) markup += `<path d="${connector.capD}" fill="none" stroke="var(--edge)" stroke-width="${CONFIG.outerWidth}" stroke-linecap="round" mask="url(#${maskId})"></path>`;
+        }
+        for (const { connector, ids } of femaleUi) {
+          if (connector.maskPaths[0]) markup += `<path d="${connector.maskPaths[0]}" fill="none" stroke="var(--edge)" stroke-width="${CONFIG.outerWidth * 2}" stroke-linecap="round" stroke-linejoin="round" clip-path="url(#${ids.cutoutClipId})" mask="url(#${ids.holeMaskId})"></path>`;
+          if (connector.maskPaths[1]) markup += `<path d="${connector.maskPaths[1]}" fill="none" stroke="var(--edge)" stroke-width="${CONFIG.outerWidth * 2}" stroke-linecap="round" stroke-linejoin="round" clip-path="url(#${ids.cutoutClipId})" mask="url(#${ids.throatMaskId})"></path>`;
+        }
+        markup += '</g>';
+        if (includeHits) {
+          markup += `<path d="${geom.hitPath}" class="hit" fill="rgba(0,0,0,0.001)" stroke="none"></path>` + geom.connectorsGeom.map(connector => connectorHitMarkup(connector.hitPaths)).join('');
+        }
+        return markup;
       }
       const maskId = `${idBase}-piece-mask`;
       const fillMaskId = `${idBase}-fill-mask`;
@@ -574,12 +814,21 @@
         femaleUi.push({ connector, ids });
       }
 
+      const thumbnailFillD = [
+        geom.bodyPolygonD,
+        ...geom.startGeom.fillPaths,
+        ...geom.endGeom.fillPaths,
+        ...geom.startGeom.maskPaths,
+        ...geom.endGeom.maskPaths
+      ].join(' ');
       let markup = '<defs>' +
-        `<mask id="${maskId}" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse"><rect x="-10000" y="-10000" width="20000" height="20000" fill="white"></rect>${[...geom.startGeom.maskPaths, ...geom.endGeom.maskPaths].map(d => `<path d="${d}" fill="black"></path>`).join('')}</mask>` +
-        `<mask id="${fillMaskId}" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse"><rect x="-10000" y="-10000" width="20000" height="20000" fill="black"></rect><path d="${geom.bodyPolygonD}" fill="white" stroke="white" stroke-width="${CONFIG.outerWidth}" stroke-linejoin="round" stroke-linecap="round"></path>${geom.startGeom.fillPaths.map(d => `<path d="${d}" fill="white" stroke="white" stroke-width="${CONFIG.outerWidth}" stroke-linejoin="round" stroke-linecap="round"></path>`).join('')}${geom.endGeom.fillPaths.map(d => `<path d="${d}" fill="white" stroke="white" stroke-width="${CONFIG.outerWidth}" stroke-linejoin="round" stroke-linecap="round"></path>`).join('')}${[...geom.startGeom.maskPaths, ...geom.endGeom.maskPaths].map(d => `<path d="${d}" fill="black" stroke="black" stroke-width="${CONFIG.outerWidth}" stroke-linejoin="round" stroke-linecap="round"></path>`).join('')}</mask>` +
+        `<mask id="${maskId}" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse">${coverageRectWhite}${[...geom.startGeom.maskPaths, ...geom.endGeom.maskPaths].map(d => `<path d="${d}" fill="black"></path>`).join('')}</mask>` +
+        (isThumbnail ? '' : `<mask id="${fillMaskId}" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse">${coverageRectBlack}<path d="${geom.bodyPolygonD}" fill="white" stroke="white" stroke-width="${CONFIG.outerWidth}" stroke-linejoin="round" stroke-linecap="round"></path>${geom.startGeom.fillPaths.map(d => `<path d="${d}" fill="white" stroke="white" stroke-width="${CONFIG.outerWidth}" stroke-linejoin="round" stroke-linecap="round"></path>`).join('')}${geom.endGeom.fillPaths.map(d => `<path d="${d}" fill="white" stroke="white" stroke-width="${CONFIG.outerWidth}" stroke-linejoin="round" stroke-linecap="round"></path>`).join('')}${[...geom.startGeom.maskPaths, ...geom.endGeom.maskPaths].map(d => `<path d="${d}" fill="black" stroke="black" stroke-width="${CONFIG.outerWidth}" stroke-linejoin="round" stroke-linecap="round"></path>`).join('')}</mask>`) +
         extraDefs +
         '</defs>' +
-        `<rect x="-10000" y="-10000" width="20000" height="20000" fill="var(--piece-fill)" mask="url(#${fillMaskId})"></rect>` +
+        (isThumbnail
+          ? `<path d="${thumbnailFillD}" fill="var(--piece-fill)" fill-rule="evenodd" stroke="none"></path>`
+          : `${coverageRectFill}`) +
         `<path d="${geom.edgeLeftD}" fill="none" stroke="var(--edge)" stroke-width="${CONFIG.outerWidth}" stroke-linecap="round" stroke-linejoin="round"></path>` +
         `<path d="${geom.edgeRightD}" fill="none" stroke="var(--edge)" stroke-width="${CONFIG.outerWidth}" stroke-linecap="round" stroke-linejoin="round"></path>` +
         '<g>' + connectorOutlineMarkup(geom.startGeom) + connectorOutlineMarkup(geom.endGeom);
@@ -612,32 +861,28 @@
     }
 
     function renderViewTransform() {
-      if (!dom.worldLayer) return;
-      dom.worldLayer.setAttribute('transform', `translate(${state.view.panX.toFixed(3)} ${state.view.panY.toFixed(3)}) scale(${state.view.zoom.toFixed(5)})`);
+      const transform = `translate(${state.view.panX.toFixed(3)} ${state.view.panY.toFixed(3)}) scale(${state.view.zoom.toFixed(5)})`;
+      if (dom.worldLayer) dom.worldLayer.setAttribute('transform', transform);
     }
 
     function trashMarkup(active=false) {
-      const fill = active ? 'rgba(180,35,24,.12)' : 'rgba(255,250,242,.94)';
-      const stroke = active ? 'rgba(180,35,24,.45)' : 'rgba(0,0,0,.09)';
-      const text = active ? '#8b1e12' : '#6f6255';
-      const x = state.trashBounds.x;
-      const y = state.trashBounds.y;
+      const iconStroke = active ? '#8b1e12' : '#b42318';
       return `
-        <g id="trashDrop" transform="translate(${x} ${y})" aria-hidden="true">
-          <rect x="0" y="0" width="${state.trashBounds.width}" height="${state.trashBounds.height}" rx="12" ry="12" fill="${fill}" stroke="${stroke}" stroke-width="1"></rect>
-          <g transform="translate(28 20)">
-            <path d="M22 12h20l2 6h10v4H10v-4h10l2-6zm3 0-1.3 4h16.6L39 12H25zm-6 14h26l-2.8 26a6 6 0 0 1-6 5.4H27.8a6 6 0 0 1-6-5.4L19 26zm8 6v16m10-16v16" fill="none" stroke="${text}" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"></path>
-          </g>
-        </g>`;
+        <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+          <path d="M22 12h20l2 6h10v4H10v-4h10l2-6zm3 0-1.3 4h16.6L39 12H25zm-6 14h26l-2.8 26a6 6 0 0 1-6 5.4H27.8a6 6 0 0 1-6-5.4L19 26zm8 6v16m10-16v16" fill="none" stroke="${iconStroke}" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>`;
     }
 
     function renderTrashDrop() {
-      if (dom.uiUnderlayLayer) dom.uiUnderlayLayer.innerHTML = trashMarkup(state.dragOverTrash);
+      if (!dom.trashOverlay) return;
+      dom.trashOverlay.innerHTML = trashMarkup(state.dragOverTrash);
+      dom.trashOverlay.classList.toggle('active', state.dragOverTrash);
     }
 
-    function isSvgPointOverTrash(point) {
-      const b = state.trashBounds;
-      return point.x >= b.x && point.x <= b.x + b.width && point.y >= b.y && point.y <= b.y + b.height;
+    function isClientPointOverTrash(clientX, clientY) {
+      if (!dom.trashOverlay) return false;
+      const rect = dom.trashOverlay.getBoundingClientRect();
+      return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
     }
 
     function queueWarningsUpdate() {
@@ -650,7 +895,8 @@
     }
 
     function updatePieceTransform(piece) {
-      const transform = `translate(${piece.x.toFixed(3)} ${piece.y.toFixed(3)}) rotate(${piece.rotation.toFixed(3)})`;
+      const pivot = pieceLocalPivot(piece);
+      const transform = `translate(${piece.x.toFixed(3)} ${piece.y.toFixed(3)}) rotate(${piece.rotation.toFixed(3)}) translate(${-pivot.x.toFixed(3)} ${-pivot.y.toFixed(3)})`;
       piece.el.setAttribute('transform', transform);
       if (piece.overlayEl) piece.overlayEl.setAttribute('transform', transform);
       piece.el.style.display = piece.visible ? '' : 'none';
@@ -661,10 +907,12 @@
     }
 
     function renderPiece(piece) {
-      piece.connectors = getTypeGeometry(piece.type).connectorPoints;
+      const geom = getTypeGeometry(piece.type);
+      piece.connectors = geom.connectorPoints;
+      piece.rotationPivot = geom.rotationPivot || { x: 0, y: 0 };
       piece.renderVersion = (piece.renderVersion || 0) + 1;
       piece.el.innerHTML = buildPieceMarkup(piece.type, `piece-${piece.id}-${piece.renderVersion}`, true);
-      if (piece.overlayEl) piece.overlayEl.innerHTML = buildTrackOverlayMarkup(piece.type, true);
+      if (piece.overlayEl) piece.overlayEl.innerHTML = buildTrackOverlayMarkup(piece.type, true, `piece-track-${piece.id}`);
       updatePieceTransform(piece);
     }
 
@@ -697,6 +945,10 @@
     }
 
     function createPiece(type, options={}) {
+      const geom = getTypeGeometry(type);
+      const spawnOriginX = options.x ?? CONFIG.newPieceOrigin.x + type.pieces.length * CONFIG.spawnStep.x;
+      const spawnOriginY = options.y ?? CONFIG.newPieceOrigin.y + type.pieces.length * CONFIG.spawnStep.y;
+      const pivot = geom.rotationPivot || { x: 0, y: 0 };
       const piece = {
         id: ++state.pieceCounter,
         type,
@@ -710,11 +962,12 @@
         notes: type.notes,
         compositeKind: type.compositeKind,
         visible: options.visible ?? true,
-        x: options.x ?? CONFIG.newPieceOrigin.x + type.pieces.length * CONFIG.spawnStep.x,
-        y: options.y ?? CONFIG.newPieceOrigin.y + type.pieces.length * CONFIG.spawnStep.y,
+        x: spawnOriginX + pivot.x,
+        y: spawnOriginY + pivot.y,
         rotation: options.rotation ?? 0,
         renderVersion: 0,
         connectors: [],
+        rotationPivot: pivot,
         label: type.presetCode ? `${type.presetCode} ${state.pieceCounter}` : `Piece ${state.pieceCounter}`
       };
       piece.el = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -747,7 +1000,7 @@
 
     function rotatePiece(piece, direction=1) {
       if (!piece) return;
-      const step = piece.isStraight ? 45 : (piece.angleDeg < 0 ? -45 : 45);
+      const step = 45;
       piece.rotation += step * direction;
       updatePieceTransform(piece);
       renderLegend();
@@ -834,12 +1087,164 @@
       return bestSingle;
     }
 
+    function connectorSlotKey(pieceId, connectorIndex) {
+      return `${pieceId}:${connectorIndex}`;
+    }
+
+    function clampVectorMagnitude(vector, maxMagnitude) {
+      const magnitude = Math.hypot(vector.x, vector.y);
+      if (!magnitude || magnitude <= maxMagnitude) return vector;
+      const scale = maxMagnitude / magnitude;
+      return { x: vector.x * scale, y: vector.y * scale };
+    }
+
+    function buildMutualAlignmentLinks(maxDistance=CONFIG.seriesRelaxDistance) {
+      const visiblePieces = pieceValues().filter(piece => piece.visible);
+      const bestByConnector = new Map();
+      for (const piece of visiblePieces) {
+        for (let ownIndex = 0; ownIndex < piece.connectors.length; ownIndex++) {
+          const own = piece.connectors[ownIndex];
+          const ownWorld = worldConnectorPoint(piece, own.local);
+          const ownDir = worldDirection(piece, own.direction);
+          let best = null;
+          for (const other of visiblePieces) {
+            if (other.id === piece.id) continue;
+            for (let targetIndex = 0; targetIndex < other.connectors.length; targetIndex++) {
+              const target = other.connectors[targetIndex];
+              if (own.kind === target.kind) continue;
+              const targetDir = worldDirection(other, target.direction);
+              if (!areConnectorDirectionsAligned(ownDir, targetDir)) continue;
+              const targetWorld = worldConnectorPoint(other, target.local);
+              const d = distance(ownWorld, targetWorld);
+              if (d > maxDistance) continue;
+              if (!best || d < best.distance) {
+                best = {
+                  pieceId: piece.id,
+                  connectorIndex: ownIndex,
+                  otherPieceId: other.id,
+                  otherConnectorIndex: targetIndex,
+                  distance: d
+                };
+              }
+            }
+          }
+          if (best) bestByConnector.set(connectorSlotKey(piece.id, ownIndex), best);
+        }
+      }
+      const links = [];
+      const seen = new Set();
+      for (const best of bestByConnector.values()) {
+        const reverse = bestByConnector.get(connectorSlotKey(best.otherPieceId, best.otherConnectorIndex));
+        if (!reverse) continue;
+        if (reverse.otherPieceId !== best.pieceId || reverse.otherConnectorIndex !== best.connectorIndex) continue;
+        const key = [connectorSlotKey(best.pieceId, best.connectorIndex), connectorSlotKey(best.otherPieceId, best.otherConnectorIndex)].sort().join('|');
+        if (seen.has(key)) continue;
+        seen.add(key);
+        links.push({
+          aPieceId: best.pieceId,
+          aIndex: best.connectorIndex,
+          bPieceId: best.otherPieceId,
+          bIndex: best.otherConnectorIndex
+        });
+      }
+      return links;
+    }
+
+    function buildLinkedPieceComponent(seedPieceId, links) {
+      const adjacency = new Map();
+      for (const link of links) {
+        if (!adjacency.has(link.aPieceId)) adjacency.set(link.aPieceId, new Set());
+        if (!adjacency.has(link.bPieceId)) adjacency.set(link.bPieceId, new Set());
+        adjacency.get(link.aPieceId).add(link.bPieceId);
+        adjacency.get(link.bPieceId).add(link.aPieceId);
+      }
+      const component = new Set([seedPieceId]);
+      const queue = [seedPieceId];
+      while (queue.length) {
+        const pieceId = queue.shift();
+        const neighbours = adjacency.get(pieceId);
+        if (!neighbours) continue;
+        for (const neighbourId of neighbours) {
+          if (component.has(neighbourId)) continue;
+          component.add(neighbourId);
+          queue.push(neighbourId);
+        }
+      }
+      return component;
+    }
+
+    function relaxConnectedSeries(seedPieceId) {
+      const links = buildMutualAlignmentLinks(CONFIG.seriesRelaxDistance);
+      if (!links.length) return false;
+      const component = buildLinkedPieceComponent(seedPieceId, links);
+      if (component.size < 2) return false;
+      const componentLinks = links.filter(link => component.has(link.aPieceId) && component.has(link.bPieceId));
+      if (!componentLinks.length) return false;
+      let moved = false;
+      for (let iter = 0; iter < CONFIG.seriesRelaxIterations; iter++) {
+        const adjustments = new Map();
+        for (const pieceId of component) adjustments.set(pieceId, { x: 0, y: 0, count: 0 });
+        for (const link of componentLinks) {
+          const aPiece = state.pieces.get(link.aPieceId);
+          const bPiece = state.pieces.get(link.bPieceId);
+          if (!aPiece || !bPiece || !aPiece.visible || !bPiece.visible) continue;
+          const aConnector = aPiece.connectors[link.aIndex];
+          const bConnector = bPiece.connectors[link.bIndex];
+          if (!aConnector || !bConnector) continue;
+          const aPoint = worldConnectorPoint(aPiece, aConnector.local);
+          const bPoint = worldConnectorPoint(bPiece, bConnector.local);
+          const gap = clampVectorMagnitude({ x: bPoint.x - aPoint.x, y: bPoint.y - aPoint.y }, CONFIG.seriesRelaxMaxPerPass);
+          const aAdjust = adjustments.get(aPiece.id);
+          const bAdjust = adjustments.get(bPiece.id);
+          aAdjust.x += gap.x * 0.5;
+          aAdjust.y += gap.y * 0.5;
+          aAdjust.count += 1;
+          bAdjust.x -= gap.x * 0.5;
+          bAdjust.y -= gap.y * 0.5;
+          bAdjust.count += 1;
+        }
+        const proposedSteps = [];
+        for (const pieceId of component) {
+          const adjust = adjustments.get(pieceId);
+          if (!adjust || !adjust.count) continue;
+          proposedSteps.push({
+            pieceId,
+            x: (adjust.x / adjust.count) * CONFIG.seriesRelaxStep,
+            y: (adjust.y / adjust.count) * CONFIG.seriesRelaxStep
+          });
+        }
+        if (!proposedSteps.length) break;
+        const meanStep = proposedSteps.reduce((acc, step) => ({ x: acc.x + step.x, y: acc.y + step.y }), { x: 0, y: 0 });
+        meanStep.x /= proposedSteps.length;
+        meanStep.y /= proposedSteps.length;
+        let maxStep = 0;
+        for (const step of proposedSteps) {
+          const piece = state.pieces.get(step.pieceId);
+          if (!piece) continue;
+          const dx = step.x - meanStep.x;
+          const dy = step.y - meanStep.y;
+          piece.x += dx;
+          piece.y += dy;
+          maxStep = Math.max(maxStep, Math.hypot(dx, dy));
+        }
+        if (maxStep < 0.01) break;
+        moved = true;
+      }
+      if (!moved) return false;
+      for (const pieceId of component) {
+        const piece = state.pieces.get(pieceId);
+        if (piece) updatePieceTransform(piece);
+      }
+      return true;
+    }
+
     function snapPiece(piece) {
       const candidate = findSnapCandidate(piece);
       if (!candidate) return false;
       piece.x += candidate.offset.x;
       piece.y += candidate.offset.y;
       updatePieceTransform(piece);
+      relaxConnectedSeries(piece.id);
       return true;
     }
 
@@ -883,11 +1288,16 @@
     }
 
     function buildDisplayName(type) {
-      return type.presetCode || (type.isStraight ? 'Straight' : type.radiusMode);
+      if (type.presetCode) return presetDisplayName(type);
+      const baseName = type.isStraight ? 'Straight' : type.radiusMode;
+      return `${connectorIcon(type.startConnector)} ${baseName} ${connectorIcon(type.endConnector)}`;
     }
 
     function sortedTypes() {
       return [...state.pieceTypes.values()].sort((a, b) => {
+        const ai = PRESET_INDEX.get(a.presetCode) ?? Number.MAX_SAFE_INTEGER;
+        const bi = PRESET_INDEX.get(b.presetCode) ?? Number.MAX_SAFE_INTEGER;
+        if (ai !== bi) return ai - bi;
         const ap = a.presetCode || '', bp = b.presetCode || '';
         if (ap !== bp) return ap.localeCompare(bp, undefined, { numeric: true });
         if (a.isStraight !== b.isStraight) return a.isStraight ? -1 : 1;
@@ -907,7 +1317,7 @@
         const meta = type.isStraight
           ? `L ${fmt(type.centreLength)} · ${type.pieces.length} piece${type.pieces.length === 1 ? '' : 's'}`
           : `L ${fmt(type.centreLength)} · R ${fmt(type.radiusValue)} · ${type.pieces.length} piece${type.pieces.length === 1 ? '' : 's'}`;
-        html += `<div class="spec-card"><div class="spec-header"><div class="spec-title"><div class="spec-name">${buildDisplayName(type)} · ${connectorCode(type.startConnector, type.endConnector)}</div><div class="spec-meta">${meta}</div></div><div class="spec-actions"><button class="mini-btn" data-action="add-type" data-type-key="${type.key}">Add another</button><button class="icon-btn${type.expanded ? ' expanded' : ''}" data-action="toggle-type" data-type-key="${type.key}" title="${type.expanded ? 'Collapse list' : 'Expand list'}"><span class="arrow">▾</span></button></div></div><div class="piece-list${type.expanded ? ' expanded' : ''}">`;
+        html += `<div class="spec-card"><div class="spec-header"><div class="spec-title"><div class="spec-name">${buildDisplayName(type)}</div><div class="spec-meta">${meta}</div></div><div class="spec-actions"><button class="mini-btn" data-action="add-type" data-type-key="${type.key}">Add another</button><button class="icon-btn${type.expanded ? ' expanded' : ''}" data-action="toggle-type" data-type-key="${type.key}" title="${type.expanded ? 'Collapse list' : 'Expand list'}"><span class="arrow">▾</span></button></div></div><div class="piece-list${type.expanded ? ' expanded' : ''}">`;
         for (const piece of type.pieces) {
           const label = `${piece.label} · rot ${fmt(piece.rotation)}°`;
           html += `<div class="piece-row${piece.id === state.activePieceId ? ' active' : ''}" data-action="select-piece" data-piece-id="${piece.id}"><input class="piece-toggle" type="checkbox" data-action="toggle-visible" data-piece-id="${piece.id}" ${piece.visible ? 'checked' : ''}><div class="piece-label" title="${label}">${label}</div><button class="delete-btn" data-action="delete-piece" data-piece-id="${piece.id}" aria-label="Delete ${piece.label}" title="Delete piece">×</button></div>`;
@@ -945,7 +1355,13 @@
       const bounds = geom.thumbBounds;
       const tx = frame.pad + (frame.viewWidth - frame.pad * 2 - (bounds.maxX - bounds.minX)) / 2 - bounds.minX;
       const ty = frame.pad + (frame.viewHeight - frame.pad * 2 - (bounds.maxY - bounds.minY)) / 2 - bounds.minY;
-      const svg = `<svg xmlns="http://www.w3.org/2000/svg" class="preset-thumb" viewBox="0 0 ${frame.viewWidth} ${frame.viewHeight}" preserveAspectRatio="xMidYMid meet" aria-hidden="true" focusable="false" style="--piece-fill:#dac09b;--rail:#4b2a17;--edge:#111111;--centre:#f4b35e;"><g transform="translate(${tx.toFixed(3)} ${ty.toFixed(3)})">${buildPieceMarkup(type, `thumb-${preset.code}`, false)}</g></svg>`;
+      const thumbCoverage = {
+        x: bounds.minX - 20,
+        y: bounds.minY - 20,
+        width: (bounds.maxX - bounds.minX) + 40,
+        height: (bounds.maxY - bounds.minY) + 40
+      };
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" class="preset-thumb" viewBox="0 0 ${frame.viewWidth} ${frame.viewHeight}" preserveAspectRatio="xMidYMid meet" aria-hidden="true" focusable="false" style="--piece-fill:#dac09b;--rail:#4b2a17;--edge:#111111;--centre:#f4b35e;"><g transform="translate(${tx.toFixed(3)} ${ty.toFixed(3)})">${buildPieceMarkup(type, `thumb-${preset.code}`, false, thumbCoverage)}</g></svg>`;
       state.thumbCache.set(preset.code, svg);
       return svg;
     }
@@ -971,6 +1387,54 @@
       return createPiece(type, pos);
     }
 
+    function createPresetPieceAtClient(presetCode, clientX, clientY) {
+      const preset = PRESETS.find(item => item.code === presetCode);
+      if (!preset) return null;
+      const type = ensureType(presetToSpec(preset));
+      const pivot = getTypeGeometry(type).rotationPivot || { x: 0, y: 0 };
+      const world = worldPointFromClient(clientX, clientY);
+      state.activePresetCode = preset.code;
+      syncPresetActiveState();
+      const piece = createPiece(type, { x: world.x - pivot.x, y: world.y - pivot.y });
+      snapPiece(piece);
+      return piece;
+    }
+
+    function canDropPresetAtClient(clientX, clientY) {
+      const workspaceRect = dom.workspace?.getBoundingClientRect?.();
+      if (!workspaceRect) return false;
+      if (clientX < workspaceRect.left || clientX > workspaceRect.right || clientY < workspaceRect.top || clientY > workspaceRect.bottom) return false;
+      const stripRect = dom.presetStrip?.getBoundingClientRect?.();
+      if (stripRect && clientX >= stripRect.left && clientX <= stripRect.right && clientY >= stripRect.top && clientY <= stripRect.bottom) return false;
+      return true;
+    }
+
+    function updateLibraryDragGhost(drag, clientX, clientY) {
+      if (!drag?.ghostEl) return;
+      drag.ghostEl.style.transform = `translate(${clientX + 14}px, ${clientY + 14}px) rotate(2deg)`;
+      drag.ghostEl.classList.toggle('can-drop', canDropPresetAtClient(clientX, clientY));
+    }
+
+    function ensureLibraryDragGhost(drag) {
+      if (!drag || drag.ghostEl) return;
+      const ghost = document.createElement('div');
+      ghost.className = 'preset-card preset-drag-ghost';
+      ghost.innerHTML = drag.sourceButton.innerHTML;
+      document.body.appendChild(ghost);
+      drag.ghostEl = ghost;
+      drag.sourceButton.classList.add('drag-origin');
+      updateLibraryDragGhost(drag, drag.lastClientX, drag.lastClientY);
+    }
+
+    function clearLibraryDrag() {
+      const drag = state.libraryDrag;
+      if (!drag) return;
+      drag.sourceButton?.classList?.remove('drag-origin');
+      if (drag.ghostEl) drag.ghostEl.remove();
+      drag.sourceButton?.releasePointerCapture?.(drag.pointerId);
+      state.libraryDrag = null;
+    }
+
     function buildPresetButtons() {
       const frag = document.createDocumentFragment();
       for (const preset of PRESETS) {
@@ -979,9 +1443,9 @@
         btn.className = 'preset-card';
         btn.dataset.action = 'place-preset';
         btn.dataset.code = preset.code;
-        btn.setAttribute('aria-label', `Place ${preset.code}: ${preset.notes}`);
-        btn.title = `Place ${preset.code}`;
-        btn.innerHTML = `${getThumbSvgMarkup(preset)}<div class="preset-code">${preset.code}</div><div class="preset-meta">${preset.notes}</div>`;
+        btn.setAttribute('aria-label', `Place ${presetDisplayName(preset)}`);
+        btn.title = `Place ${presetDisplayName(preset)}`;
+        btn.innerHTML = `${presetThumbWrapMarkup(preset)}<div class="preset-meta"><div class="preset-kind">${presetFamilyLabel(preset)}</div><div class="preset-name">${presetDisplayName(preset)}</div></div>`;
         frag.appendChild(btn);
       }
       dom.presetButtons.replaceChildren(frag);
@@ -1001,6 +1465,7 @@
         clearTimeout(state.pendingClick.timerId);
         state.pendingClick = null;
       }
+      clearLibraryDrag();
       state.drag = null;
       state.activePieceId = null;
       state.pieces.clear();
@@ -1049,9 +1514,62 @@
     function handlePresetButtonsClick(event) {
       const button = event.target.closest('[data-action="place-preset"]');
       if (!button || !dom.presetButtons.contains(button)) return;
+      if (performance.now() < state.suppressPresetClickUntil) {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
       event.preventDefault();
       event.stopPropagation();
       placePresetPiece(button.dataset.code);
+    }
+
+    function startLibraryDrag(event) {
+      const button = event.target.closest('[data-action="place-preset"]');
+      if (!button || !dom.presetButtons.contains(button) || event.button !== 0) return;
+      state.libraryDrag = {
+        pointerId: event.pointerId,
+        presetCode: button.dataset.code,
+        sourceButton: button,
+        startClientX: event.clientX,
+        startClientY: event.clientY,
+        lastClientX: event.clientX,
+        lastClientY: event.clientY,
+        started: false,
+        ghostEl: null
+      };
+      button.setPointerCapture?.(event.pointerId);
+    }
+
+    function handleLibraryDragMove(event) {
+      const drag = state.libraryDrag;
+      if (!drag || drag.pointerId !== event.pointerId) return false;
+      drag.lastClientX = event.clientX;
+      drag.lastClientY = event.clientY;
+      if (!drag.started) {
+        if (Math.hypot(event.clientX - drag.startClientX, event.clientY - drag.startClientY) < 6) return true;
+        drag.started = true;
+        state.suppressPresetClickUntil = performance.now() + 500;
+        ensureLibraryDragGhost(drag);
+      }
+      updateLibraryDragGhost(drag, event.clientX, event.clientY);
+      event.preventDefault();
+      return true;
+    }
+
+    function finishLibraryDrag(event) {
+      const drag = state.libraryDrag;
+      if (!drag) return false;
+      if (event && drag.pointerId !== event.pointerId) return false;
+      const dropX = event?.clientX ?? drag.lastClientX;
+      const dropY = event?.clientY ?? drag.lastClientY;
+      const didDrag = !!drag.started;
+      const presetCode = drag.presetCode;
+      clearLibraryDrag();
+      if (!didDrag) return false;
+      if (canDropPresetAtClient(dropX, dropY)) createPresetPieceAtClient(presetCode, dropX, dropY);
+      state.suppressPresetClickUntil = performance.now() + 500;
+      return true;
     }
 
     function setTrashActive(active) {
@@ -1073,8 +1591,7 @@
         piece.el.classList.remove('dragging');
         if (piece.overlayEl) piece.overlayEl.classList.remove('dragging');
         if (drag.moved) {
-          const dropPoint = (drag.dropClientX != null && drag.dropClientY != null) ? svgUiPoint(drag.dropClientX, drag.dropClientY) : null;
-          if (dropPoint && isSvgPointOverTrash(dropPoint)) {
+          if (drag.dropClientX != null && drag.dropClientY != null && isClientPointOverTrash(drag.dropClientX, drag.dropClientY)) {
             deletePiece(piece.id);
           } else {
             snapPiece(piece);
@@ -1109,40 +1626,56 @@
       return state.pieces.get(Number(pieceNode.dataset.pieceId)) || null;
     }
 
-    dom.svg.addEventListener('pointerdown', event => {
-      if (event.button !== 0) return;
-      const piece = getPieceFromEventTarget(event.target);
-      event.preventDefault();
-      if (piece) {
-        selectPiece(piece);
-        const p = worldPointFromClient(event.clientX, event.clientY);
-        state.drag = {
-          pieceId: piece.id,
-          pointerId: event.pointerId,
-          dx: p.x - piece.x,
-          dy: p.y - piece.y,
-          startX: p.x,
-          startY: p.y,
-          moved: false,
-          dropClientX: event.clientX,
-          dropClientY: event.clientY
-        };
-        setTrashActive(false);
-        piece.el.classList.add('dragging');
-        if (piece.overlayEl) piece.overlayEl.classList.add('dragging');
-        (piece.overlayEl || piece.el).setPointerCapture?.(event.pointerId);
-        return;
-      }
-      const p = svgUiPoint(event.clientX, event.clientY);
+    function startPanDrag(pointerId, clientX, clientY) {
+      const p = svgUiPoint(clientX, clientY);
       state.panDrag = {
-        pointerId: event.pointerId,
+        pointerId,
         startSvgX: p.x,
         startSvgY: p.y,
         startPanX: state.view.panX,
         startPanY: state.view.panY
       };
       dom.workspace?.classList.add('panning');
-      dom.svg.setPointerCapture?.(event.pointerId);
+      dom.workspace?.setPointerCapture?.(pointerId);
+    }
+
+    function shouldStartPanFromEvent(event) {
+      if (event.button !== 0) return false;
+      if (!dom.workspace?.contains(event.target)) return false;
+      if (event.target?.closest?.('.preset-strip')) return false;
+      if (event.target?.closest?.('.piece, .piece-overlay')) return false;
+      return true;
+    }
+
+    dom.svg.addEventListener('pointerdown', event => {
+      if (event.button !== 0) return;
+      const piece = getPieceFromEventTarget(event.target);
+      if (!piece) return;
+      event.preventDefault();
+      event.stopPropagation();
+      selectPiece(piece);
+      const p = worldPointFromClient(event.clientX, event.clientY);
+      state.drag = {
+        pieceId: piece.id,
+        pointerId: event.pointerId,
+        dx: p.x - piece.x,
+        dy: p.y - piece.y,
+        startX: p.x,
+        startY: p.y,
+        moved: false,
+        dropClientX: event.clientX,
+        dropClientY: event.clientY
+      };
+      setTrashActive(false);
+      piece.el.classList.add('dragging');
+      if (piece.overlayEl) piece.overlayEl.classList.add('dragging');
+      (piece.overlayEl || piece.el).setPointerCapture?.(event.pointerId);
+    });
+
+    dom.workspace.addEventListener('pointerdown', event => {
+      if (!shouldStartPanFromEvent(event)) return;
+      event.preventDefault();
+      startPanDrag(event.pointerId, event.clientX, event.clientY);
     });
 
     dom.svg.addEventListener('contextmenu', event => {
@@ -1162,7 +1695,8 @@
       rotatePiece(piece, -1);
     });
 
-    dom.svg.addEventListener('pointermove', event => {
+    function handlePointerMove(event) {
+      if (handleLibraryDragMove(event)) return;
       if (state.panDrag) {
         const p = svgUiPoint(event.clientX, event.clientY);
         state.view.panX = state.panDrag.startPanX + (p.x - state.panDrag.startSvgX);
@@ -1177,11 +1711,11 @@
       if (Math.hypot(p.x - state.drag.startX, p.y - state.drag.startY) > 4) state.drag.moved = true;
       state.drag.dropClientX = event.clientX;
       state.drag.dropClientY = event.clientY;
-      setTrashActive(state.drag.moved && isSvgPointOverTrash(svgUiPoint(event.clientX, event.clientY)));
+      setTrashActive(state.drag.moved && isClientPointOverTrash(event.clientX, event.clientY));
       piece.x = p.x - state.drag.dx;
       piece.y = p.y - state.drag.dy;
       updatePieceTransform(piece);
-    });
+    }
 
     dom.svg.addEventListener('wheel', event => {
       event.preventDefault();
@@ -1198,11 +1732,14 @@
       renderViewTransform();
     }, { passive: false });
 
-    dom.svg.addEventListener('pointerup', endDrag);
-    dom.svg.addEventListener('pointercancel', endDrag);
-    window.addEventListener('pointerup', endDrag);
+    window.addEventListener('pointermove', handlePointerMove);
+    dom.workspace.addEventListener('pointerup', event => { if (!finishLibraryDrag(event)) endDrag(); });
+    dom.workspace.addEventListener('pointercancel', event => { if (!finishLibraryDrag(event)) endDrag(); });
+    window.addEventListener('pointerup', event => { if (!finishLibraryDrag(event)) endDrag(); });
+    window.addEventListener('pointercancel', event => { if (!finishLibraryDrag(event)) endDrag(); });
     if (dom.legend) dom.legend.addEventListener('click', handleLegendClick);
     dom.presetButtons.addEventListener('click', handlePresetButtonsClick);
+    dom.presetButtons.addEventListener('pointerdown', startLibraryDrag);
     if (dom.sidebarToggle) dom.sidebarToggle.addEventListener('click', () => setPartsCollapsed(!dom.app.classList.contains('parts-collapsed')));
 
     renderViewTransform();

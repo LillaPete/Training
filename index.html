@@ -81,6 +81,16 @@
     <section class="workspace">
       <svg id="canvas" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" aria-label="Track design canvas">
         <defs>
+          <filter id="woodTextureFilter" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+            <feTurbulence type="fractalNoise" baseFrequency="0.014 0.18" numOctaves="2" seed="7" stitchTiles="stitch" result="noise"></feTurbulence>
+            <feColorMatrix in="noise" type="matrix" values="0 0 0 0 0.31  0 0 0 0 0.20  0 0 0 0 0.12  0 0 0 0.62 0" result="grain"></feColorMatrix>
+            <feComposite in="grain" in2="SourceAlpha" operator="in"></feComposite>
+          </filter>
+          <filter id="woodTextureHighlightFilter" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+            <feTurbulence type="fractalNoise" baseFrequency="0.006 0.055" numOctaves="1" seed="19" stitchTiles="stitch" result="noise"></feTurbulence>
+            <feColorMatrix in="noise" type="matrix" values="0 0 0 0 0.94  0 0 0 0 0.83  0 0 0 0 0.67  0 0 0 0.28 0" result="highlight"></feColorMatrix>
+            <feComposite in="highlight" in2="SourceAlpha" operator="in"></feComposite>
+          </filter>
         </defs>
         <g id="uiUnderlayLayer"><rect id="panSurface" x="0" y="0" width="1200" height="800" fill="rgba(0,0,0,0.001)" pointer-events="all"></rect></g>
         <g id="worldLayer">
@@ -716,6 +726,106 @@
       return `<defs><mask id="${maskId}" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse"><rect x="-10000" y="-10000" width="20000" height="20000" fill="white"></rect>${cutoutPaths.map(d => `<path d="${d}" fill="black"></path>`).join('')}</mask></defs>`;
     }
 
+    function hashString(value) {
+      let hash = 2166136261 >>> 0;
+      for (let i = 0; i < value.length; i += 1) {
+        hash ^= value.charCodeAt(i);
+        hash = Math.imul(hash, 16777619);
+      }
+      return hash >>> 0;
+    }
+
+    function woodRand(seed, index) {
+      let x = (seed + Math.imul(index + 1, 374761393)) >>> 0;
+      x ^= x >>> 13;
+      x = Math.imul(x, 1274126177) >>> 0;
+      x ^= x >>> 16;
+      return (x >>> 0) / 4294967295;
+    }
+
+    function perpendicular(v) {
+      return { x: -v.y, y: v.x };
+    }
+
+    function offsetPoint(point, vector, amount) {
+      return { x: point.x + vector.x * amount, y: point.y + vector.y * amount };
+    }
+
+    function addPoints(a, b) {
+      return { x: a.x + b.x, y: a.y + b.y };
+    }
+
+    function scaleVector(vector, amount) {
+      return { x: vector.x * amount, y: vector.y * amount };
+    }
+
+    function inwardDirection(connector) {
+      return connector.side === 'start'
+        ? normalizeVector({ x: -connector.direction.x, y: -connector.direction.y })
+        : normalizeVector(connector.direction);
+    }
+
+    function buildWoodGuides(geom) {
+      const connectors = geom.connectorPoints || [];
+      const starts = connectors.filter(connector => connector.side === 'start');
+      const ends = connectors.filter(connector => connector.side === 'end');
+      if (!starts.length || !ends.length) return [];
+      if (starts.length === 1 && ends.length === 1) return [{ start: starts[0], end: ends[0] }];
+      if (starts.length === 1) return ends.map(end => ({ start: starts[0], end }));
+      if (ends.length === 1) return starts.map(start => ({ start, end: ends[0] }));
+      const count = Math.min(starts.length, ends.length);
+      return Array.from({ length: count }, (_, i) => ({ start: starts[i], end: ends[i] }));
+    }
+
+    function buildWoodTextureMarkup(geom, maskId, idBase) {
+      const seed = hashString(String(idBase || geom.code || 'wood'));
+      const guides = buildWoodGuides(geom);
+      const darkLines = [];
+      const lightLines = [];
+      if (!guides.length) return '';
+
+      guides.forEach((guide, guideIndex) => {
+        const p0 = guide.start.local;
+        const p1 = guide.end.local;
+        const t0 = inwardDirection(guide.start);
+        const t1 = inwardDirection(guide.end);
+        const n0 = perpendicular(t0);
+        const n1 = perpendicular(t1);
+        const span = Math.max(20, distance(p0, p1));
+        const laneSpread = CONFIG.outerOffset * (geom.compositeKind ? 0.58 : 0.72);
+        const laneCount = Math.max(8, Math.min(16, Math.round(laneSpread * 0.56 + span / 32)));
+
+        for (let laneIndex = 0; laneIndex < laneCount; laneIndex += 1) {
+          const idx = guideIndex * 100 + laneIndex * 10;
+          const laneT = laneCount === 1 ? 0.5 : laneIndex / (laneCount - 1);
+          const offsetBase = (laneT - 0.5) * laneSpread * 2.0;
+          const offsetJitterA = (woodRand(seed, idx + 1) - 0.5) * 2.2;
+          const offsetJitterB = (woodRand(seed, idx + 2) - 0.5) * 2.4;
+          const bendA = (woodRand(seed, idx + 3) - 0.5) * Math.min(9, span * 0.05);
+          const bendB = (woodRand(seed, idx + 4) - 0.5) * Math.min(10, span * 0.055);
+          const leadA = span * (0.19 + woodRand(seed, idx + 5) * 0.18);
+          const leadB = span * (0.20 + woodRand(seed, idx + 6) * 0.20);
+          const startPoint = offsetPoint(p0, n0, offsetBase + offsetJitterA);
+          const endPoint = offsetPoint(p1, n1, offsetBase + offsetJitterB);
+          const c1 = addPoints(addPoints(startPoint, scaleVector(t0, leadA)), scaleVector(n0, bendA));
+          const c2 = addPoints(addPoints(endPoint, scaleVector(t1, -leadB)), scaleVector(n1, bendB));
+          const pathD = cubicPathD(startPoint, c1, c2, endPoint);
+          darkLines.push(`<path d="${pathD}" fill="none" stroke="#7a5230" stroke-width="${(0.38 + woodRand(seed, idx + 7) * 0.42).toFixed(3)}" stroke-linecap="round" opacity="${(0.08 + woodRand(seed, idx + 8) * 0.10).toFixed(3)}"></path>`);
+          if (laneIndex < laneCount - 1 || guideIndex % 2 === 0) {
+            const lightOffsetA = offsetBase + (woodRand(seed, idx + 9) - 0.5) * 1.8 + laneSpread / Math.max(3, laneCount);
+            const lightOffsetB = offsetBase + (woodRand(seed, idx + 10) - 0.5) * 1.8 + laneSpread / Math.max(3, laneCount);
+            const lightStart = offsetPoint(p0, n0, lightOffsetA);
+            const lightEnd = offsetPoint(p1, n1, lightOffsetB);
+            const lightC1 = addPoints(addPoints(lightStart, scaleVector(t0, leadA * (0.88 + woodRand(seed, idx + 11) * 0.18))), scaleVector(n0, bendA * 0.55));
+            const lightC2 = addPoints(addPoints(lightEnd, scaleVector(t1, -leadB * (0.88 + woodRand(seed, idx + 12) * 0.18))), scaleVector(n1, bendB * 0.55));
+            lightLines.push(`<path d="${cubicPathD(lightStart, lightC1, lightC2, lightEnd)}" fill="none" stroke="#f1ddba" stroke-width="${(0.24 + woodRand(seed, idx + 13) * 0.20).toFixed(3)}" stroke-linecap="round" opacity="${(0.04 + woodRand(seed, idx + 14) * 0.05).toFixed(3)}"></path>`);
+          }
+        }
+      });
+
+      return `<g mask="url(#${maskId})">${darkLines.join('')}${lightLines.join('')}</g>`;
+    }
+
     function buildTrackOverlayMarkup(type, includeHits=true, idBase='track') {
       const geom = getTypeGeometry(type);
       if (geom.compositeKind === 'crossA1') {
@@ -759,6 +869,7 @@
       const coverageRectWhite = `<rect x="${fillCoverage.x.toFixed(3)}" y="${fillCoverage.y.toFixed(3)}" width="${fillCoverage.width.toFixed(3)}" height="${fillCoverage.height.toFixed(3)}" fill="white"></rect>`;
       const coverageRectBlack = `<rect x="${fillCoverage.x.toFixed(3)}" y="${fillCoverage.y.toFixed(3)}" width="${fillCoverage.width.toFixed(3)}" height="${fillCoverage.height.toFixed(3)}" fill="black"></rect>`;
       const coverageRectFill = `<rect x="${fillCoverage.x.toFixed(3)}" y="${fillCoverage.y.toFixed(3)}" width="${fillCoverage.width.toFixed(3)}" height="${fillCoverage.height.toFixed(3)}" fill="var(--piece-fill)" mask="url(#${idBase}-fill-mask)"></rect>`;
+      const woodTextureOverlay = isThumbnail ? '' : buildWoodTextureMarkup(geom, `${idBase}-fill-mask`, idBase);
       if (geom.compositeKind === 'crossA1') {
         return geom.components.map(component =>
           `<g transform="translate(${component.tx.toFixed(3)} ${component.ty.toFixed(3)}) rotate(${component.rotation.toFixed(3)})">${buildPieceMarkup(geom.baseType, `${idBase}-${component.idSuffix}`, false, coverageRect)}</g>`
@@ -787,7 +898,7 @@
           '</defs>' +
           (isThumbnail
             ? `<path d="${thumbnailFillD}" fill="var(--piece-fill)" fill-rule="evenodd" stroke="none"></path>`
-            : `${coverageRectFill}`) +
+            : `${coverageRectFill}${woodTextureOverlay}`) +
           `<path d="${geom.bodyPolygonD}" fill="none" stroke="var(--edge)" stroke-width="${CONFIG.outerWidth}" stroke-linecap="round" stroke-linejoin="round"></path>` +
           '<g>' + geom.connectorsGeom.map(connector => connectorOutlineMarkup(connector)).join('');
         for (const connector of geom.connectorsGeom) {
@@ -828,7 +939,7 @@
         '</defs>' +
         (isThumbnail
           ? `<path d="${thumbnailFillD}" fill="var(--piece-fill)" fill-rule="evenodd" stroke="none"></path>`
-          : `${coverageRectFill}`) +
+          : `${coverageRectFill}${woodTextureOverlay}`) +
         `<path d="${geom.edgeLeftD}" fill="none" stroke="var(--edge)" stroke-width="${CONFIG.outerWidth}" stroke-linecap="round" stroke-linejoin="round"></path>` +
         `<path d="${geom.edgeRightD}" fill="none" stroke="var(--edge)" stroke-width="${CONFIG.outerWidth}" stroke-linecap="round" stroke-linejoin="round"></path>` +
         '<g>' + connectorOutlineMarkup(geom.startGeom) + connectorOutlineMarkup(geom.endGeom);

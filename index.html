@@ -81,16 +81,6 @@
     <section class="workspace">
       <svg id="canvas" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" aria-label="Track design canvas">
         <defs>
-          <filter id="woodTextureFilter" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
-            <feTurbulence type="fractalNoise" baseFrequency="0.014 0.18" numOctaves="2" seed="7" stitchTiles="stitch" result="noise"></feTurbulence>
-            <feColorMatrix in="noise" type="matrix" values="0 0 0 0 0.31  0 0 0 0 0.20  0 0 0 0 0.12  0 0 0 0.62 0" result="grain"></feColorMatrix>
-            <feComposite in="grain" in2="SourceAlpha" operator="in"></feComposite>
-          </filter>
-          <filter id="woodTextureHighlightFilter" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
-            <feTurbulence type="fractalNoise" baseFrequency="0.006 0.055" numOctaves="1" seed="19" stitchTiles="stitch" result="noise"></feTurbulence>
-            <feColorMatrix in="noise" type="matrix" values="0 0 0 0 0.94  0 0 0 0 0.83  0 0 0 0 0.67  0 0 0 0.28 0" result="highlight"></feColorMatrix>
-            <feComposite in="highlight" in2="SourceAlpha" operator="in"></feComposite>
-          </filter>
         </defs>
         <g id="uiUnderlayLayer"><rect id="panSurface" x="0" y="0" width="1200" height="800" fill="rgba(0,0,0,0.001)" pointer-events="all"></rect></g>
         <g id="worldLayer">
@@ -143,14 +133,14 @@
       centreWidth: 1.4,
       newPieceOrigin: { x: 360, y: 370 },
       spawnStep: { x: 22, y: 18 },
-      snapDistance: 22,
+      snapDistance: 34,
       connectionEpsilon: 0.75,
-      alignmentToleranceDeg: 2,
-      dualSnapMaxResidual: 8,
-      seriesRelaxDistance: 12,
-      seriesRelaxIterations: 18,
-      seriesRelaxStep: 0.6,
-      seriesRelaxMaxPerPass: 3
+      alignmentToleranceDeg: 5,
+      dualSnapMaxResidual: 14,
+      seriesRelaxDistance: 24,
+      seriesRelaxIterations: 26,
+      seriesRelaxStep: 0.8,
+      seriesRelaxMaxPerPass: 5
     };
 
     const dom = {
@@ -182,10 +172,13 @@
       thumbCache: new Map(),
       thumbFrame: null,
       warningsQueued: false,
+      warningsDirty: false,
       dragOverTrash: false,
       panDrag: null,
       libraryDrag: null,
       suppressPresetClickUntil: 0,
+      pendingPointerMove: null,
+      pointerFrameQueued: false,
       view: { panX: 0, panY: 0, zoom: 1, minZoom: 0.35, maxZoom: 4 },
       trashBounds: { x: 14, y: 692, width: 94, height: 94 }
     };
@@ -778,52 +771,7 @@
     }
 
     function buildWoodTextureMarkup(geom, maskId, idBase) {
-      const seed = hashString(String(idBase || geom.code || 'wood'));
-      const guides = buildWoodGuides(geom);
-      const darkLines = [];
-      const lightLines = [];
-      if (!guides.length) return '';
-
-      guides.forEach((guide, guideIndex) => {
-        const p0 = guide.start.local;
-        const p1 = guide.end.local;
-        const t0 = inwardDirection(guide.start);
-        const t1 = inwardDirection(guide.end);
-        const n0 = perpendicular(t0);
-        const n1 = perpendicular(t1);
-        const span = Math.max(20, distance(p0, p1));
-        const laneSpread = CONFIG.outerOffset * (geom.compositeKind ? 0.58 : 0.72);
-        const laneCount = Math.max(8, Math.min(16, Math.round(laneSpread * 0.56 + span / 32)));
-
-        for (let laneIndex = 0; laneIndex < laneCount; laneIndex += 1) {
-          const idx = guideIndex * 100 + laneIndex * 10;
-          const laneT = laneCount === 1 ? 0.5 : laneIndex / (laneCount - 1);
-          const offsetBase = (laneT - 0.5) * laneSpread * 2.0;
-          const offsetJitterA = (woodRand(seed, idx + 1) - 0.5) * 2.2;
-          const offsetJitterB = (woodRand(seed, idx + 2) - 0.5) * 2.4;
-          const bendA = (woodRand(seed, idx + 3) - 0.5) * Math.min(9, span * 0.05);
-          const bendB = (woodRand(seed, idx + 4) - 0.5) * Math.min(10, span * 0.055);
-          const leadA = span * (0.19 + woodRand(seed, idx + 5) * 0.18);
-          const leadB = span * (0.20 + woodRand(seed, idx + 6) * 0.20);
-          const startPoint = offsetPoint(p0, n0, offsetBase + offsetJitterA);
-          const endPoint = offsetPoint(p1, n1, offsetBase + offsetJitterB);
-          const c1 = addPoints(addPoints(startPoint, scaleVector(t0, leadA)), scaleVector(n0, bendA));
-          const c2 = addPoints(addPoints(endPoint, scaleVector(t1, -leadB)), scaleVector(n1, bendB));
-          const pathD = cubicPathD(startPoint, c1, c2, endPoint);
-          darkLines.push(`<path d="${pathD}" fill="none" stroke="#7a5230" stroke-width="${(0.38 + woodRand(seed, idx + 7) * 0.42).toFixed(3)}" stroke-linecap="round" opacity="${(0.08 + woodRand(seed, idx + 8) * 0.10).toFixed(3)}"></path>`);
-          if (laneIndex < laneCount - 1 || guideIndex % 2 === 0) {
-            const lightOffsetA = offsetBase + (woodRand(seed, idx + 9) - 0.5) * 1.8 + laneSpread / Math.max(3, laneCount);
-            const lightOffsetB = offsetBase + (woodRand(seed, idx + 10) - 0.5) * 1.8 + laneSpread / Math.max(3, laneCount);
-            const lightStart = offsetPoint(p0, n0, lightOffsetA);
-            const lightEnd = offsetPoint(p1, n1, lightOffsetB);
-            const lightC1 = addPoints(addPoints(lightStart, scaleVector(t0, leadA * (0.88 + woodRand(seed, idx + 11) * 0.18))), scaleVector(n0, bendA * 0.55));
-            const lightC2 = addPoints(addPoints(lightEnd, scaleVector(t1, -leadB * (0.88 + woodRand(seed, idx + 12) * 0.18))), scaleVector(n1, bendB * 0.55));
-            lightLines.push(`<path d="${cubicPathD(lightStart, lightC1, lightC2, lightEnd)}" fill="none" stroke="#f1ddba" stroke-width="${(0.24 + woodRand(seed, idx + 13) * 0.20).toFixed(3)}" stroke-linecap="round" opacity="${(0.04 + woodRand(seed, idx + 14) * 0.05).toFixed(3)}"></path>`);
-          }
-        }
-      });
-
-      return `<g mask="url(#${maskId})">${darkLines.join('')}${lightLines.join('')}</g>`;
+      return "";
     }
 
     function buildTrackOverlayMarkup(type, includeHits=true, idBase='track') {
@@ -996,13 +944,23 @@
       return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
     }
 
-    function queueWarningsUpdate() {
+    function queueWarningsUpdate(force=false) {
+      if (!force && (state.drag || state.panDrag || state.libraryDrag)) {
+        state.warningsDirty = true;
+        return;
+      }
       if (state.warningsQueued) return;
       state.warningsQueued = true;
       requestAnimationFrame(() => {
         state.warningsQueued = false;
+        state.warningsDirty = false;
         updateConnectionWarnings();
       });
+    }
+
+    function flushWarningsUpdate() {
+      if (!state.warningsDirty && !state.warningsQueued) return;
+      queueWarningsUpdate(true);
     }
 
     function updatePieceTransform(piece) {
@@ -1349,13 +1307,32 @@
       return true;
     }
 
+    function translatePieceComponent(seedPieceId, offset, maxDistance=CONFIG.seriesRelaxDistance) {
+      const links = buildMutualAlignmentLinks(maxDistance);
+      const component = buildLinkedPieceComponent(seedPieceId, links);
+      for (const pieceId of component) {
+        const linkedPiece = state.pieces.get(pieceId);
+        if (!linkedPiece || !linkedPiece.visible) continue;
+        linkedPiece.x += offset.x;
+        linkedPiece.y += offset.y;
+        updatePieceTransform(linkedPiece);
+      }
+      return component;
+    }
+
     function snapPiece(piece) {
       const candidate = findSnapCandidate(piece);
       if (!candidate) return false;
-      piece.x += candidate.offset.x;
-      piece.y += candidate.offset.y;
-      updatePieceTransform(piece);
+      translatePieceComponent(piece.id, candidate.offset);
       relaxConnectedSeries(piece.id);
+      for (let pass = 0; pass < 2; pass++) {
+        const cleanup = findSnapCandidate(piece);
+        if (!cleanup) break;
+        const cleanupDistance = Math.hypot(cleanup.offset.x, cleanup.offset.y);
+        if (cleanupDistance < 0.15) break;
+        translatePieceComponent(piece.id, cleanup.offset);
+        if (!relaxConnectedSeries(piece.id)) break;
+      }
       return true;
     }
 
@@ -1578,6 +1555,9 @@
       }
       clearLibraryDrag();
       state.drag = null;
+      state.panDrag = null;
+      state.pendingPointerMove = null;
+      state.pointerFrameQueued = false;
       state.activePieceId = null;
       state.pieces.clear();
       state.pieceTypes.clear();
@@ -1691,9 +1671,11 @@
     }
 
     function endDrag() {
+      processPendingPointerMove();
       if (state.panDrag) {
         state.panDrag = null;
         dom.workspace?.classList.remove('panning');
+        flushWarningsUpdate();
       }
       if (!state.drag) return;
       const drag = state.drag;
@@ -1729,6 +1711,7 @@
       setTrashActive(false);
       state.drag = null;
       renderLegend();
+      flushWarningsUpdate();
     }
 
     function getPieceFromEventTarget(target) {
@@ -1806,10 +1789,13 @@
       rotatePiece(piece, -1);
     });
 
-    function handlePointerMove(event) {
-      if (handleLibraryDragMove(event)) return;
+    function processPendingPointerMove() {
+      if (!state.pendingPointerMove) return;
+      const move = state.pendingPointerMove;
+      state.pendingPointerMove = null;
+      if (handleLibraryDragMove(move)) return;
       if (state.panDrag) {
-        const p = svgUiPoint(event.clientX, event.clientY);
+        const p = svgUiPoint(move.clientX, move.clientY);
         state.view.panX = state.panDrag.startPanX + (p.x - state.panDrag.startSvgX);
         state.view.panY = state.panDrag.startPanY + (p.y - state.panDrag.startSvgY);
         renderViewTransform();
@@ -1818,14 +1804,29 @@
       if (!state.drag) return;
       const piece = state.pieces.get(state.drag.pieceId);
       if (!piece) return;
-      const p = worldPointFromClient(event.clientX, event.clientY);
+      const p = worldPointFromClient(move.clientX, move.clientY);
       if (Math.hypot(p.x - state.drag.startX, p.y - state.drag.startY) > 4) state.drag.moved = true;
-      state.drag.dropClientX = event.clientX;
-      state.drag.dropClientY = event.clientY;
-      setTrashActive(state.drag.moved && isClientPointOverTrash(event.clientX, event.clientY));
+      state.drag.dropClientX = move.clientX;
+      state.drag.dropClientY = move.clientY;
+      setTrashActive(state.drag.moved && isClientPointOverTrash(move.clientX, move.clientY));
       piece.x = p.x - state.drag.dx;
       piece.y = p.y - state.drag.dy;
       updatePieceTransform(piece);
+    }
+
+    function queuePointerMove(event) {
+      state.pendingPointerMove = {
+        pointerId: event.pointerId,
+        clientX: event.clientX,
+        clientY: event.clientY,
+        preventDefault() {}
+      };
+      if (state.pointerFrameQueued) return;
+      state.pointerFrameQueued = true;
+      requestAnimationFrame(() => {
+        state.pointerFrameQueued = false;
+        processPendingPointerMove();
+      });
     }
 
     dom.svg.addEventListener('wheel', event => {
@@ -1843,7 +1844,7 @@
       renderViewTransform();
     }, { passive: false });
 
-    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointermove', queuePointerMove);
     dom.workspace.addEventListener('pointerup', event => { if (!finishLibraryDrag(event)) endDrag(); });
     dom.workspace.addEventListener('pointercancel', event => { if (!finishLibraryDrag(event)) endDrag(); });
     window.addEventListener('pointerup', event => { if (!finishLibraryDrag(event)) endDrag(); });
